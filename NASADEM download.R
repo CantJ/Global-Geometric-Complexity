@@ -12,6 +12,7 @@ rm(list=ls(all=TRUE))
 library(XML)
 library(RCurl)
 library(curl)
+library(R.utils)
 
 ###################################################
 # STEP 1: Specify download URL, file destination and file requirements
@@ -19,7 +20,7 @@ library(curl)
 
 # Specify URL location of files for download
 URL <- "https://e4ftl01.cr.usgs.gov/MEASURES/NASADEM_NC.001/2000.02.11/"
-# This URL connects through the USGS Earth resources observation and Science Center LP DAAC Data Pool
+# This URL connects through the USGS Earth resources observation and Science Center LP DAAC Data Pool (https://lpdaac.usgs.gov/about/)
 
 # There are many files listed in this directory - this script is only interested in the .nc files.
 all_files <- getURL(URL,verbose=TRUE,ftp.use.epsv=TRUE, dirlistonly = TRUE) # identifies all available files
@@ -44,9 +45,13 @@ download_func <- function(ii){
 
   # define name for saved file
   destfile_use <- paste0(destfile, nc_files[ii])
+  
+  # Define LP DAAC account details
+  myusername <- "james.cant91@gmail.com"
+  mypassword <- "xxxxxxxxxxx"
     
   # download desired file
-  curl_download(url = url_use, destfile = destfile_use, quiet = FALSE, mode = "wb")
+  downloadFile(url = url_use, path = destfile_use, username = myusername, password = mypassword)
 }
 
 ###################################################
