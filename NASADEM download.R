@@ -42,16 +42,13 @@ download_func <- function(ii){
   
   # define file name
   url_use <- paste0(URL, nc_files[ii])
-
-  # define name for saved file
-  destfile_use <- paste0(destfile, nc_files[ii])
   
   # Define LP DAAC account details
   myusername <- "james.cant91@gmail.com"
   mypassword <- "xxxxxxxxxxx"
     
   # download desired file
-  downloadFile(url = url_use, path = destfile_use, username = myusername, password = mypassword)
+  downloadFile(url = url_use, path = destfile, username = myusername, password = mypassword)
 }
 
 ###################################################
