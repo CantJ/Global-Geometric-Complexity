@@ -5,8 +5,7 @@
 # Date Last Modified: April 2022
 # ------------------------------------------------------
 
-# Clear work space
-#Clear the workspace
+# Clear the workspace
 rm(list=ls(all=TRUE))
 
 # source required packages
