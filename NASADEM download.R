@@ -11,6 +11,7 @@ rm(list=ls(all=TRUE))
 # source required packages
 library(XML)
 library(RCurl)
+library(curl)
 
 ###################################################
 # STEP 1: Specify download URL, file destination and file requirements
