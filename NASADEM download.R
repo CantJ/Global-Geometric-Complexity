@@ -13,6 +13,11 @@ library(XML)
 library(RCurl)
 library(curl)
 library(R.utils)
+library(httr)
+
+# Store username and password details registered with LP DAAC system
+myusername <- "james.cant91@gmail.com"
+mypassword <- "xxxxxxxxxxx"
 
 ###################################################
 # STEP 1: Specify download URL, file destination and file requirements
@@ -23,7 +28,10 @@ URL <- "https://e4ftl01.cr.usgs.gov/MEASURES/NASADEM_NC.001/2000.02.11/"
 # This URL connects through the USGS Earth resources observation and Science Center LP DAAC Data Pool (https://lpdaac.usgs.gov/about/)
 
 # There are many files listed in this directory - this script is only interested in the .nc files.
-all_files <- getURL(URL,verbose=TRUE,ftp.use.epsv=TRUE, dirlistonly = TRUE) # identifies all available files
+all_files <- GET(URL, config = list(authenticate(myusername, mypassword)), content_type(".nc"))
+#convert response into HTML text string
+all_files <- content(all_files, as = "text")
+# extract names of the desired .nc files
 nc_files <- getHTMLLinks(all_files, xpQuery = "//a/@href['.nc'=substring(.,string-length(.) - 2)]") # subsets those that are .nc files
 
 # Specify destination file
@@ -42,10 +50,6 @@ download_func <- function(ii){
   
   # define file name
   url_use <- paste0(URL, nc_files[ii])
-  
-  # Define LP DAAC account details
-  myusername <- "james.cant91@gmail.com"
-  mypassword <- "xxxxxxxxxxx"
     
   # download desired file
   downloadFile(url = url_use, path = destfile, username = myusername, password = mypassword)
