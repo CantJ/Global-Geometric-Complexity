@@ -38,35 +38,27 @@ URL_format <- "&format=geojson_bare"
 
 # The first download section will be run manually - with all later downloads added on top.
 # define full URL
-URL_full <- paste0(URL_main, paste0(strat_types[index_start[ii]:index_end[ii],]$strat_name_id, collapse = ','), URL_format)
+URL_full <- paste0(URL_main, paste0(strat_types[index_start[1]:index_end[1],]$strat_name_id, collapse = ','), URL_format)
 
-# reformat URL link
-URL <- GET(URL_full)
-strat_json <- content(URL, as = "text")
+# obtain shapefile from URL link
+sf_map <- geojson_sf(URL_full)
 
-# open URL link
-sf_temp <- geojson_wkt(strat_json)
-
-# convert into a shapefile
-sf_map <- st_as_sf(sf_temp, wkt = 'geometry', crs = 4326) 
+# a little place holder
+jar <- 2
 
 # The remainder of the download will be done as a loop
-for (ii in 2:length(index_start)) {
+for (ii in jar:length(index_start)) {
+  # for dealing with errors 
+  jar <- ii+1
+  
   # progress read out
   print(ii)
   
   # define full URL
   URL_full <- paste0(URL_main, paste0(strat_types[index_start[ii]:index_end[ii],]$strat_name_id, collapse = ','), URL_format)
   
-  # reformat URL link
-  URL <- GET(URL_full)
-  strat_json <- content(URL, as = "text")
-  
-  # open URL link
-  sf_temp <- geojson_wkt(strat_json)
-  
-  # convert into a shapefile
-  sf_temp <- st_as_sf(sf_temp, wkt = 'geometry', crs = 4326) 
+  # Obtain associated shapefile
+  sf_temp <- suppressWarnings(geojson_sf(URL_full))
   
   # and add to existing data
   sf_map <- rbind(sf_map, sf_temp)
