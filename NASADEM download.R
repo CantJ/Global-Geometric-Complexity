@@ -17,29 +17,28 @@ library(httr)
 
 # Store username and password details registered with LP DAAC system
 myusername <- "james.cant91@gmail.com"
-mypassword <- "xxxxxxxxxxx"
+mypassword <- "Sharky@74"
 
 ###################################################
 # STEP 1: Specify download URL, file destination and file requirements
 ###################################################
 
 # Specify URL location of files for download
-URL <- "https://e4ftl01.cr.usgs.gov/MEASURES/NASADEM_NC.001/2000.02.11/"
+URL <- "https://e4ftl01.cr.usgs.gov/MEASURES/NASADEM_HGT.001/2000.02.11/NASADEM_HGT_n00e006.zip/n00e006.hgt"
 # This URL connects through the USGS Earth resources observation and Science Center LP DAAC Data Pool (https://lpdaac.usgs.gov/about/)
-
 # There are many files listed in this directory - this script is only interested in the .nc files.
-all_files <- GET(URL, config = list(authenticate(myusername, mypassword)), content_type(".nc"))
+all_files <- GET(URL, config = list(authenticate(myusername, mypassword)), content_type(".zip"))
 #convert response into HTML text string
 all_files <- content(all_files, as = "text")
 # extract names of the desired .nc files
-nc_files <- getHTMLLinks(all_files, xpQuery = "//a/@href['.nc'=substring(.,string-length(.) - 2)]") # subsets those that are .nc files
+HGT_files <- getHTMLLinks(all_files, xpQuery = "//a/@href['.zip'=substring(.,string-length(.) - 2)]") # subsets those that are .nc files
 
 # Specify destination file
 destfile <- "/Volumes/Pocillopora/Geodiversity Data/Raw/NASADEM/"
 
 # clear memory space
 rm(all_files)
-
+curl_download("https://e4ftl01.cr.usgs.gov/MEASURES/NASADEM_HGT.001/2000.02.11/NASADEM_HGT_n00e006.zip", destfile = '/Volumes/Pocillopora/Geodiversity Data/TempFile/NASADEM_HGT_n00e006.zip/n00e006.hgt')
 ###################################################
 # STEP 2: Define download function
 ###################################################
@@ -52,7 +51,7 @@ download_func <- function(ii){
   url_use <- paste0(URL, nc_files[ii])
     
   # download desired file
-  downloadFile(url = url_use, path = destfile, username = myusername, password = mypassword)
+  downloadFile(url = URL, path = destfile, username = myusername, password = mypassword)
 }
 
 ###################################################
