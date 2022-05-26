@@ -1,5 +1,5 @@
 # This script is nessecary for ensuring the lithology (soil diversity) raster is formatted appropriately.
-# This files will then be used for determining a measure of habitat complexity across space.
+# This file will then be used for determining a measure of habitat complexity across space.
 
 # Date last modified: April 2022
 # Primary Author: James Cant
