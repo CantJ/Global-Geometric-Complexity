@@ -265,9 +265,12 @@ ComplexValues %>%
 # This is the final output of this script.
 
 # Reload updated data file to confirm successful data cleaning.
-ComplexValues <- read_parquet(paste0(filePath,'GlobalComplexity.parquet'), as_data_frame = F)
+ComplexValues <- read_parquet(paste0(filePath,'GlobalComplexity.parquet'), as_data_frame = T)
 
 ComplexValues %>%
-  filter(R == 1) %>% count(D, sort = TRUE) %>% collect() # all good to proceed.
+  filter(R == 1) %>% count(D, sort = TRUE) # all good to proceed.
+
+# Save Data as a csv file.
+write_rds(ComplexValues, paste0(filePath, 'GlobalComplexity.csv'))
 
 ##### ------------------------------------------------------------- End of Code --------------------------------
