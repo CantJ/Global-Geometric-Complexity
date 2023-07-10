@@ -2,7 +2,7 @@
 # at a resolution of 248*248m. 
 # The outcome of this script is a large csv file (stored as a compressed parquet to allow for memory efficient storage).
 
-# Date last modified: May 2023
+# Date last modified: July 2023
 # Primary Author: James Cant
 # ------------------------------------------------------------------------------------------------------------
 
@@ -10,21 +10,17 @@
 rm(list=ls(all=TRUE))
 
 # Define directory pathways
-filePath <- 'E:/Geodiversity_Data/Finalised/Complexity v Biodiversity/'
-fileSave <- 'D:/Geodiversity/ComplexityFiles/' # temporary file directory for saving .csv sub-files
+filePath <- 'C:/Users/jic2/OneDrive - University of St Andrews/Documents/Complexity Analyses/'
+fileSave <- 'C:/Users/jic2/OneDrive - University of St Andrews/Documents/Complexity Analyses/Complexity Files/' # temporary file directory for saving .csv sub-files
 # Define selected raster file
-SelectDEM <- 'Bathymetry_Eckert_248.vrt'# Global raster (248m resolution)
+SelectDEM <- 'GlobalDEM_Mollweide_187m.tif'# Global raster (187m resolution)
 # This file is a global DEM comprising terrestrial topography and ocean bathymetry. 
 # This file was produced by mosaicing tiles obtained from GEBCO.
-# This DEM was then reprojected to an Eckert IV equal area projection.
-# SelectDEM <- 'Topography_Eckert_23.vrt' # terrestrial raster (23m resolution)
-# This file has been produced by mosaicing together a series of GEOTIFF tiles obtained from the NASADEM program.
-# Further details on the product can be found at: https://earthdata.nasa.gov/esds/competitive-programs/measures/nasadem
-# The full DEM was then reprojected to an Eckert IV equal area projection.
-LandMask <- 'LandMask_Eckert_1km.tif' # This is a raster template denoting pixels associated with terrestrial and marine environments.
-# This file has been generated using from the Copernicus CCL Land Cover project using a 2020 map of land cover. Its has been projected to an Eckert 4 1240m projection.
+# This DEM was then reprojected to an World Mollweide equal area projection.
+LandMask <- 'LandMask_mollweide.tif' # This is a raster template denoting pixels associated with terrestrial and marine environments.
 
 # load necessary packages
+library(tidyr)
 library(rgdal)
 library(sp)
 library(raster)
@@ -35,7 +31,7 @@ library(dplyr)
 library(readr)
 library(data.table)
 library(arrow)
-library(tidyr)
+
 
 #################################################
 # STEP 1: Define complexity function
@@ -52,7 +48,7 @@ ExtractComplexity <- function(ii, DEMBand, L, L0, GridY, x0, progress = FALSE){
   GridCell <- crop(DEMBand, extent(x0, x0+L, GridY[ii], GridY[ii]+L))
   
   # Estimate Height range for selected DEM cell
-  H <- max(GridCell[!is.na(GridCell)]) - min(GridCell[!is.na(GridCell)])
+  H <- suppressWarnings(max(GridCell[!is.na(GridCell)]) - min(GridCell[!is.na(GridCell)]))
   
   # Generate Spatial Grid data frame
   TmpGridCell <- as(GridCell, 'SpatialGridDataFrame')
@@ -79,7 +75,7 @@ ExtractComplexity <- function(ii, DEMBand, L, L0, GridY, x0, progress = FALSE){
     H <- NA
     D <- NA
   }
-    
+  
   # Return extracted complexity values
   return(list(Y = ii, Lat = GridY[ii], H = H, R = R, D = D))
 }
@@ -89,9 +85,13 @@ ExtractComplexity <- function(ii, DEMBand, L, L0, GridY, x0, progress = FALSE){
 #################################################
 
 # load DEM raster
-GlobalDEM <- vrt(paste0(filePath, SelectDEM))
+GlobalDEM <- rast(paste0(filePath, SelectDEM))
 # check projection
-GlobalDEM # should be Eckert 4 equal area
+GlobalDEM # should be Mollweide equal area
+plot(GlobalDEM)
+
+# Store the crs projection
+Molle <- crs(GlobalDEM)
 
 # define L0 (minimum resolution)
 L0 <- res(GlobalDEM)[1]
@@ -100,7 +100,7 @@ L0 <- res(GlobalDEM)[1]
 # Previous approaches have ensured the difference between L0 and L covers 2 orders of magnitude.
 # However a sensitivity test performed previously indicates that estimates of complexity will remain consistent at ~0.7 orders of magnitude
 # Therefore the scales selected will allow for calculating complexity at close to a 1km scale.
-L <- L0*5
+L <- L0*6
 
 # define dimensions for sub-setting DEM in to manageable longitudinal bands equal to L in width to ease processing demands.
 minX <- ext(GlobalDEM)[1]
@@ -121,7 +121,7 @@ GridY <- seq(minY, maxY, by = L)
 
 # Open multicore interface
 nCores = detectCores()
-cl <- makeCluster(nCores*0.6) # not to overload the computer system
+cl <- makeCluster(nCores*0.7) # not to overload the computer system
 registerDoParallel(cl)
 
 # Run multicore processing
@@ -136,14 +136,14 @@ ComplexValues <- foreach(xx = initial_x:length(GridX), .inorder = FALSE) %dopar%
   library(terra)
   library(data.table)
   library(readr)
-    
+  
   # Allow all cluster nodes access to the necessary rasters (rasters cannot be called from the global environment)
-  DEM <- vrt(paste0(filePath, SelectDEM))  
+  DEM <- rast(paste0(filePath, SelectDEM))  
   MaskRast <- rast(paste0(filePath, LandMask)) # Load Mask raster
-   
+  
   # define origin coordinate for selected longitudinal band
   x0 <- GridX[xx]
-
+  
   # Clip rasters to focus on selected longitudinal band
   tmpDEMRast <- raster(terra::crop(DEM, ext(x0, x0+L, minY, maxY+L)))
   tmpMask <- terra::crop(MaskRast, ext(x0, x0+L, minY, maxY+L))
@@ -155,16 +155,18 @@ ComplexValues <- foreach(xx = initial_x:length(GridX), .inorder = FALSE) %dopar%
   
   # Identify the realm associated with each pixel
   Realm <- numeric(dim(CellComplex)[1])
-  Realm[values(tmpMask) == 1] <- 1 # if pixel is terrestrial, value = 1
+  Realm[values(tmpMask) != 0] <- 1 # if pixel is terrestrial, value = 1
+  # remove final Realm reading in order to match up vector sizes
+  Realm <- Realm[1:dim(CellComplex)[1]]
   
   # Attach Longitudinal details and realm identifier
   XValues <- data.frame(X = rep(xx, dim(CellComplex)[1]),
                         Lon = rep(x0, dim(CellComplex)[1]),
                         Terrestrial = Realm) # Marine = 0 & Terrestrial = 1
   CellComplex <- cbind(XValues, CellComplex)
-    
+  
   # and save outputs (in-case of system meltdowns)
-  fwrite(CellComplex, paste0(fileSave, 'ComplexityValues_X', xx, '.csv'), row.names = FALSE) # This will be one of 27292 csv subfiles.
+  fwrite(CellComplex, paste0(fileSave, 'ComplexityValues_X', xx, '.csv'), row.names = FALSE) # This will be one of 32157 csv subfiles.
   
   # return cluster output
   CellComplex
@@ -178,8 +180,8 @@ stopCluster(cl)
 # In-case of loop crashes and the .csv file subsets need to be called.
 # Compile the .csv sub file together
 ComplexValues <- as.data.frame(list.files(fileSave, full.names = TRUE) %>% 
-                               lapply(read_csv, show_col_types = FALSE) %>% 
-                               bind_rows)
+                                 lapply(read_csv, show_col_types = FALSE) %>% 
+                                 bind_rows)
 # and write to file (Checkpoint)
 # using the arrow package this large csv file is saved in a memory efficient format
 write_parquet(ComplexValues, paste0(filePath,'GlobalComplexity.parquet'))
@@ -273,4 +275,4 @@ ComplexValues %>%
 # Save Data as a csv file.
 write_rds(ComplexValues, paste0(filePath, 'GlobalComplexity.csv'))
 
-##### ------------------------------------------------------------- End of Code --------------------------------
+##### ------------------------------------------------------------- End of Code --------------------------------##### ------------------------------------------------------------- End of Code --------------------------------

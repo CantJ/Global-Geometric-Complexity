@@ -2,23 +2,20 @@
 # This script will also compare complexity estimate calculated using the planar equation and the surface area function
 #
 # Main author: James Cant (jic2@st-andrews.ac.uk)
-# Date Last Modified: May 2023
+# Date Last Modified: July 2023
 # -----------------------------------------------------------
 
 # Clear workspace
 rm(list=ls(all=TRUE))
 
 # Define directory pathways
-filePath <- 'E:/Geodiversity_Data/Finalised/Complexity v Biodiversity/'
+filePath <- '~/James/Raw geodiversity data/'
 # Define raster files
-TerrestrialDEM <- 'Topography_Eckert_23.vrt' # terrestrial raster (23m resolution)
-# This file has been produced by mosaicing together a series of GEOTIFF tiles obtained from the NASADEM program.
-# Further details on the product can be found at: https://earthdata.nasa.gov/esds/competitive-programs/measures/nasadem
-# The full DEM was then reprojected to an Eckert IV equal area projection.
-GlobalDEM <- 'Bathymetry_Eckert_248.vrt'# Bathymetry raster (248m resolution)
-# Despite the naming here, this file is actually a global DEM comprising terrestrial topography and ocean bathymetry. 
+GlobalDEM <- 'GlobalDEM_Mollweide_187m.tif'# Global raster (187m resolution)
+# This file is a global DEM comprising terrestrial topography and ocean bathymetry. 
 # This file was produced by mosaicing tiles obtained from GEBCO.
-# This DEM was then reprojected to an Eckert IV equal area projection.
+# This DEM was then reprojected to an World Mollweide equal area projection.
+
 
 # load necessary packages
 library(rgdal)
@@ -178,12 +175,12 @@ VaryingL <- function(ii, test.both = TRUE){
         # Approach 1: Calculate Height range and rugosity using the plane-equations.
         # This portion of the code is the processing time bottleneck.
         cellHR <- height_variation(Rast = tmpRast, scl = scl, L = L[ii], x0 = x0, y0 = y0)
-      
+        
         # Extract complexity values
         CellComplex1 <- ComplexityValues(data = cellHR, L = L[ii], L0 = L0)
         # Approach 2: Calculate Height range and rugosity using inbuilt R functions.
         CellComplex2 <- ExtractComplexity(GridCell = tmpRast, L = L[ii], L0 = L0)
-      
+        
         # Save outputs
         Outputs <- c(L[ii], # scale
                      xx, # Grid index values
@@ -196,7 +193,7 @@ VaryingL <- function(ii, test.both = TRUE){
                      as.numeric(CellComplex2$H),
                      as.numeric(CellComplex2$R),
                      as.numeric(CellComplex2$D))
-      
+        
         # And store
         PixelValues <- rbind(PixelValues, Outputs)
         colnames(PixelValues) <- c('L','X','Y','Lon','Lat','H_theory','R_theory','D_theory','H','R','D')
@@ -224,9 +221,9 @@ VaryingL <- function(ii, test.both = TRUE){
   # and return
   return(PixelValues)
 }
-  
+
 # load Global DEM raster
-DEM <- vrt(paste0(filePath, GlobalDEM))
+DEM <- rast(paste0(filePath, GlobalDEM))
 
 # define L0 (minimum resolution)
 # Minimum resolution requires 2*2 grid cell
@@ -240,10 +237,10 @@ Lmax <- L0*(10^2)
 minX <- 3.5e+06; minY <- 0 
 Xlimit <- minX+(Lmax*3); Ylimit <- minY+(Lmax*3)
 # Outline scale over which to vary L
-L <- c(L0*c(2,5,10^1,10^2))
-  
-# Test how varying L between two and less than one order of magnitude (49km and 1km) influences complexity estimates
-LTest <- lapply(4:1, VaryingL)
+L <- c(L0*c(2,3,4,5,6,10^1,10^2))
+
+# Test how varying L between two and less than one order of magnitude (37.4km and <1km) influences complexity estimates
+LTest <- lapply(length(L):1, VaryingL)
 # Convert outputs into a data frame
 LTestdf <- rbindlist(LTest)
 # and save data as a checkpoint
@@ -253,8 +250,8 @@ write.csv(LTestdf, paste0(filePath, 'ResolutionSens.csv'), row.names = FALSE)
 # STEP 3: Test the effect of changing resolution on complexity estimates
 #################################################
 
-# Load data from checkpoint
-LTestdf <- read.csv(paste0(filePath, 'ResolutionSens.csv'))
+# Load data from checkpoint (if needed)
+# LTestdf <- read.csv(paste0(filePath, 'ResolutionSens.csv'))
 
 # Firstly, it appears using the planar equation returns incorrect estimates of fractal dimension (i.e. D < 2)
 # Visualize how the complexity estimates calculated using the two approaches compare to one another.
@@ -323,17 +320,17 @@ L0 <- res(DEM)[1]
 # Re-define largest spatial scale
 Lmax <- L0*(10^2) 
 # Re-outline scale over which to vary L
-L <- c(L0*c(2,5,10^1,10^2))
+L <- c(L0*c(2,3,4,5,6,10^1,10^2))
 
 # Test how varying L between two and one order of magnitude (25km and 0.5km) influences complexity estimates
-LTest2 <- lapply(4:1, VaryingL, test.both = FALSE) # this analysis will only focus on the approach using the inbuilt R surfaceArea function to calculate R and D.
+LTest2 <- lapply(length(L):1, VaryingL, test.both = FALSE) # this analysis will only focus on the approach using the inbuilt R surfaceArea function to calculate R and D.
 # Convert outputs into a data frame
 LTestdf2 <- rbindlist(LTest2)
 # and save data as a checkpoint
 write.csv(LTestdf2, paste0(filePath, 'ResolutionSens2.csv'), row.names = FALSE)
 
-# Load data from checkpoint
-LTestdf2 <- read.csv(paste0(filePath, 'ResolutionSens2.csv'))
+# Load data from checkpoint (if needed)
+# LTestdf2 <- read.csv(paste0(filePath, 'ResolutionSens2.csv'))
 
 # Rugosity and Fractal Dimension are additive values and so regardless of the scale used the mean values of each should correspond for a given area.
 aggregate(LTestdf2[,c('H','R','D')], list(LTestdf2$L), mean)
@@ -343,5 +340,3 @@ aggregate(LTestdf2[,c('H','R','D')], list(LTestdf2$L), mean)
 range(LTestdf2$H)
 range(LTestdf2$R)
 range(LTestdf2$D) # A couple of pixels with values higher than expected.
-
-#--------------------------------------------------------------- End of Code ------------------------------
