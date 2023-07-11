@@ -23,7 +23,6 @@ library(sp)
 library(raster)
 library(terra)
 library(dplyr)
-library(SpaDES)
 library(parallel)
 library(data.table)
 library(ggplot2)
@@ -322,7 +321,7 @@ Lmax <- L0*(10^2)
 # Re-outline scale over which to vary L
 L <- c(L0*c(2,3,4,5,6,10^1,10^2))
 
-# Test how varying L between two and one order of magnitude (25km and 0.5km) influences complexity estimates
+# Test how varying L between 19km and 0.4km influences complexity estimates
 LTest2 <- lapply(length(L):1, VaryingL, test.both = FALSE) # this analysis will only focus on the approach using the inbuilt R surfaceArea function to calculate R and D.
 # Convert outputs into a data frame
 LTestdf2 <- rbindlist(LTest2)
@@ -333,10 +332,38 @@ write.csv(LTestdf2, paste0(filePath, 'ResolutionSens2.csv'), row.names = FALSE)
 # LTestdf2 <- read.csv(paste0(filePath, 'ResolutionSens2.csv'))
 
 # Rugosity and Fractal Dimension are additive values and so regardless of the scale used the mean values of each should correspond for a given area.
-aggregate(LTestdf2[,c('H','R','D')], list(LTestdf2$L), mean)
-# Additive estimates of rugosity and fractal dimension remain largely consistent down to a scale of 1240m (~km).
+meanDF <- aggregate(LTestdf2[,c('H','R','D')], list(LTestdf2$L), mean)
+meanDF
+# Additive estimates of Rugosity and fractal dimension remain largely consistent down to a scale of 748m (4*L0).
+
+### Display scale sensitivity ----------------------
+# calculate difference between Rugosity and Fractal Dimension scales
+coeff <- max(meanDF$D)/max(meanDF$R)#
+# generate plot
+ggplot(meanDF, aes(x=log10(Group.1))) +
+  geom_line(aes(y=D), col = 'blue', linewidth = 1.5, linetype = 'dashed') +
+  geom_line(aes(y=R*coeff), col = 'red', linewidth = 1.5, linetype = 'dashed') +
+  geom_vline(xintercept = log10(1122), col = 'black', linetype = 'dotted', linewidth = 0.8) +
+  xlab('\nScale (L)') +
+  scale_x_continuous(labels = function(i) round(10^i)) +
+  scale_y_continuous(name = 'D\n',
+                     labels = function(i) round(i, digits = 2),
+                     sec.axis = sec_axis(~./coeff, 
+                                         name = 'R\n',
+                                         labels = function(i) round(i, digits = 2))) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     axis.title = element_text(size = 15, colour = 'black'),
+                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
+                     legend.justification=c(0,0), legend.position=c(0.05,0.6), 
+                     legend.background = element_blank(),
+                     legend.box.background = element_rect(colour = "black"))
+# Following this sensitivity analysis it is appropriate to select a resolution of 1122m (~1km) as a balance between enhancing resolution whilst ensuring the accuracy of complexity estimates.
+
 
 # Confirm variable distributions
 range(LTestdf2$H)
 range(LTestdf2$R)
 range(LTestdf2$D) # A couple of pixels with values higher than expected.
+
+#--------------------------------------------------------------- End of Code ------------------------------
