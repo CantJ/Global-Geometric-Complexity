@@ -1,8 +1,9 @@
 # This script is for estimating fractal dimension, surface rugosity, and height range from a global digital elevation model (Topography and Bathymetry combined), 
 # at a resolution of 187*187m. 
-# The outcome of this script is a large csv file (stored as a compressed parquet to allow for memory efficient storage).
+# The outputs from this script are a large csv file (stored as a compressed parquet to allow for memory efficient storage) and
+# rasters depicting global patterns in the complexity measures of height range, rugosity and fractal dimension.
 
-# Date last modified: July 2023
+# Date last modified: August 2023
 # Primary Author: James Cant
 # ------------------------------------------------------------------------------------------------------------
 
@@ -10,15 +11,15 @@
 rm(list=ls(all=TRUE))
 
 # Define directory pathways
-filePath <- '~/James/Raw geodiversity data/'
-fileSave <- '~/James/ComplexityFiles/' # temporary file directory for saving .csv sub-files
+filePath <- 'FileDirectory1/'
+fileSave <- 'FileDirectory2/' # temporary file directory for saving .csv sub-files
+FinalSave <- 'FileDirectory3/' # final output save location
 # Define selected raster files
-GlobalDEM <- 'GlobalDEM_Mollweide_187m.tif'# Global raster (187m resolution)
+GlobalDEM <- 'GlobalDEMfile'# Global raster (187m resolution)
 # This file is a global DEM comprising terrestrial topography and ocean bathymetry. 
 # This file was produced by mosaicing tiles obtained from GEBCO.
 # This DEM was then reprojected to an World Mollweide equal area projection.
-GeoRast <- 'GeoDiversity_Mollweide_1122m.tif' # This is a raster defining the geodiversity of terrestrial landscapes (set to a resolution equal to L and reprojected to a mollweide projection)
-MaskRast <- 'LandMask_Mollweide_1122m.tif' # This raster will be used to differentiate between complexity values associated with terrestrial and marine environments (it has also been set to a resolution equal to L and reprojected to a Mollweide projection)
+MaskRast <- 'LandTemplatefile' # This raster will be used to differentiate between complexity values associated with terrestrial and marine environments (it has also been set to a resolution equal to L and reprojected to a Mollweide projection)
 # This raster has been generated from the Land Cover 2020 data product from the Copernicus Climate Change service, by removing the coverage category associated with permenant water bodies.
 
 # load necessary packages
@@ -32,7 +33,7 @@ library(dplyr)
 library(readr)
 library(data.table)
 library(arrow)
-
+library(sf)
 
 #################################################
 # STEP 1: Define complexity function
@@ -89,16 +90,13 @@ ExtractComplexity <- function(ii, DEMBand, L, L0, GridY, x0, progress = FALSE){
 # STEP 2: Determine scope/extent, scales of variation and resolution parameters
 #################################################
 
-# load raster
+# load rasters
 DEM <- rast(paste0(filePath, GlobalDEM))
-GDRast <- rast(paste0(filePath, GeoRast))
 LandMask <- rast(paste0(filePath, MaskRast))
 # check projections
 DEM 
-GDRast 
 LandMask # should all be Mollweide equal area
 plot(DEM)
-plot(GDRast)
 plot(LandMask)
 
 # Store the crs projection
@@ -132,7 +130,7 @@ GridY <- seq(minY, maxY, by = L)
 
 # Open multicore interface
 nCores = detectCores()
-cl <- makeCluster(nCores*0.7) # not to overload the computer system
+cl <- makeCluster(nCores*0.5) # not to overload the computer system
 registerDoParallel(cl)
 
 # Run multicore processing
@@ -150,7 +148,6 @@ ComplexValues <- foreach(xx = initial_x:length(GridX), .inorder = FALSE) %dopar%
   
   # Allow all cluster nodes access to the necessary rasters (rasters cannot be called from the global environment)
   DEM <- rast(paste0(filePath, GlobalDEM)) # Digital Elevation Model
-  GDRast <- rast(paste0(filePath, GeoRast)) # Geodiversity
   LandMask <- rast(paste0(filePath, MaskRast)) # Land Mask raster
   
   # define origin coordinate for selected longitudinal band
@@ -158,7 +155,6 @@ ComplexValues <- foreach(xx = initial_x:length(GridX), .inorder = FALSE) %dopar%
   
   # Clip rasters to focus on selected longitudinal band
   tmpDEMRast <- raster(terra::crop(DEM, ext(x0, x0+L, minY, maxY+L)))
-  tmpGDRast <- terra::crop(GDRast, ext(x0, x0+L, minY, maxY+L))
   tmpMask <- terra::crop(LandMask, ext(x0, x0+L, minY, maxY+L))
   
   # Extract complexity values
@@ -166,25 +162,18 @@ ComplexValues <- foreach(xx = initial_x:length(GridX), .inorder = FALSE) %dopar%
   # transform out of list type
   CellComplex[c('Y','Lat','H','R','D','E')] <- as.numeric(unlist(CellComplex[c('Y','Lat','H','R','D','E')]))
   
-  # Extract the Geodiversity values associated with each pixel
-  G <- as.numeric(rev(values(tmpGDRast))) # the reversal of values here is necessary because the ExtractComplexity function used above processes pixels from south to north.
-  
   # Identify the realm associated with each pixel
   Realm <- numeric(dim(CellComplex)[1])
   Realm[!(is.na(rev(values(tmpMask))))] <- 1 # if pixel is terrestrial, value = 1
   
-  # Attach Longitudinal details, geodiversity estimates, and realm identifier
+  # Attach Longitudinal details and realm identifier
   XValues <- data.frame(X = rep(xx, dim(CellComplex)[1]),
                         Lon = rep(x0, dim(CellComplex)[1]),
-                        G = G,
                         Terrestrial = Realm) # Marine = 0 & Terrestrial = 1
   CellComplex <- cbind(XValues, CellComplex)
   
   # Reorder columns to make viewing easier
-  CellComplex <- CellComplex[, c('X','Y','Lon','Lat','Terrestrial','E','G','H','R','D')]
-  
-  # Just a little fix to ensure Geodiversity estimates correspond with non-marine environments
-  CellComplex[CellComplex$Terrestrial == 0 & !(is.na(CellComplex$G)), 'Terrestrial'] <- 1
+  CellComplex <- CellComplex[, c('X','Y','Lon','Lat','Terrestrial','E','H','R','D')]
   
   # and save outputs (in-case of system meltdowns)
   fwrite(CellComplex, paste0(fileSave, 'ComplexityValues_X', xx, '.csv'), row.names = FALSE) # This will be one of 32157 csv subfiles.
@@ -197,7 +186,6 @@ ComplexValues <- foreach(xx = initial_x:length(GridX), .inorder = FALSE) %dopar%
 # Close multicore cluster
 stopCluster(cl)
 
-
 # Save extracted complexities 
 # In-case of loop crashes and the .csv file subsets need to be called.
 # Compile the .csv sub file together
@@ -206,14 +194,18 @@ ComplexValues <- as.data.frame(list.files(fileSave, full.names = TRUE) %>%
                                  bind_rows)
 # and write to file (Checkpoint)
 # using the arrow package this large csv file is saved in a memory efficient format
-write_parquet(ComplexValues, paste0(filePath,'GlobalComplexity.parquet'))
+write_parquet(ComplexValues, paste0(filePath,'ComplexityData.parquet'))
 
 #################################################
 # STEP 4: Clean Complexity estimates
 #################################################
 
 # Reopen dataset using memory efficient format
-ComplexValues <- read_parquet(paste0(filePath,'GlobalComplexity.parquet'), as_data_frame = F)
+ComplexValues <- read_parquet(paste0(filePath,'ComplexityData.parquet'), as_data_frame = F)
+
+# How many NAs (due to mollweide projection)
+ComplexValues %>%
+  filter(is.na(H)) %>% collect() %>% dim() # 517052403 pixels of which 111057113 are NA
 
 # check for inappropriate entries
 ComplexValues %>%
@@ -221,9 +213,9 @@ ComplexValues %>%
 ComplexValues %>%
   filter(is.infinite(R)) %>% collect() %>% dim() # no inf entries in rugosity & Height range
 ComplexValues %>%
-  filter(is.infinite(D)) %>% collect() %>% dim() # 7531 inf entries in Fractal dimension
+  filter(is.infinite(D)) %>% collect() %>% dim() # 6515 inf entries in Fractal dimension
 ComplexValues %>%
-  filter(!is.infinite(D) & D < 2 | D > 3) %>% collect() %>% dim() # a further 493 Fractal dimension values are outside the range of 2 to 3
+  filter(!is.infinite(D) & D < 2 | D > 3) %>% collect() %>% dim() # a further 9827 Fractal dimension values are outside the range of 2 to 3
 ComplexValues %>%
   filter(!is.infinite(D) & R < 1) %>% collect() %>% dim() # No rugosity values are lower than 1.
 ComplexValues %>%
@@ -235,10 +227,10 @@ ComplexValues |>
          D = ifelse(is.infinite(D), NA, D)) |>
   mutate(D = ifelse(D<2 | D>3, NA, D)) |>
   collect() |>
-  write_parquet(paste0(filePath, 'GlobalComplexity.parquet')) # overwrite output to memory efficient object
+  write_parquet(paste0(filePath, 'ComplexityData.parquet')) # overwrite output to memory efficient object
 
 # Reload updated data file
-ComplexValues <- read_parquet(paste0(filePath,'GlobalComplexity.parquet'), as_data_frame = F)
+ComplexValues <- read_parquet(paste0(filePath,'ComplexityData.parquet'), as_data_frame = F)
 
 # Confirm that for all instances where D = 2, then R = 1 and H = 0 and visa-versa.
 ComplexValues %>%
@@ -252,7 +244,7 @@ ComplexValues %>%
 ComplexValues %>%
   filter(R == 1) %>% count(D, sort = TRUE) %>% collect()
 ComplexValues %>%
-  filter(R == 1) %>% count(H, sort = TRUE) %>% collect() # However there are 14702 instances where R = 1 but neither D = 2 nor H = 0.
+  filter(R == 1) %>% count(H, sort = TRUE) %>% collect() # However there are 11364 instances where R = 1 but neither D = 2 nor H = 0.
 # These are likely rounding errors and need to be corrected.
 # Isolate offending cells. 
 RugosityErrors <- ComplexValues %>%
@@ -266,7 +258,7 @@ for (ii in 1:dim(RugosityErrors)[1]) {
   # progress read out
   print(ii)
   # Extract grid cell corresponding with error
-  tmpRast <- crop(GlobalDEM, ext(RugosityErrors$Lon[ii], RugosityErrors$Lon[ii]+L, RugosityErrors$Lat[ii], RugosityErrors$Lat[ii]+L))
+  tmpRast <- crop(DEM, ext(RugosityErrors$Lon[ii], RugosityErrors$Lon[ii]+L, RugosityErrors$Lat[ii], RugosityErrors$Lat[ii]+L))
   # calculate height range
   H <- max(tmpRast[!is.na(tmpRast)]) - min(tmpRast[!is.na(tmpRast)])
   RugosityErrors$H2[ii] <- H
@@ -278,23 +270,97 @@ for (ii in 1:dim(RugosityErrors)[1]) {
   RugosityErrors$D2[ii] <- suppressWarnings(3 - log10(H / (sqrt(2) * L0 * sqrt(R^2 - 1))) / log10(L / L0))
 }
 # Drop repeated variables that aren't needed for merging dataframes
-RugosityErrors <- RugosityErrors[,-(c('H','D','R','Terrestrial'))]
+RugosityErrors <- RugosityErrors[,c('X','Y','Lon','Lat','H2','R2','D2')]
 # Insert the corrected values back into the original data file
 ComplexValues %>% 
   left_join(RugosityErrors,  
             by = c("X" = 'X', "Y" = 'Y', "Lon" = 'Lon', "Lat" = 'Lat')) %>%
   mutate(R = ifelse(!is.na(R2), R2, R)) %>% 
-  select(X, Y, Lon, Lat,Terrestrial, H, R, D) %>%
-  write_parquet(paste0(filePath, 'GlobalComplexity.parquet')) # overwrite output to memory efficient object
-# This is the final output of this script.
+  select(Lon, Lat, Terrestrial, E, H, R, D) %>%
+  write_parquet(paste0(FinalSave, 'ComplexityData.parquet')) # Save final data file output
 
 # Reload updated data file to confirm successful data cleaning.
-ComplexValues <- read_parquet(paste0(filePath,'GlobalComplexity.parquet'), as_data_frame = T)
+ComplexValues <- read_parquet(paste0(FinalSave,'ComplexityData.parquet'), as_data_frame = F)
 
+# Check all rugosity values of 1 correspond with fractal dimension values of 2
 ComplexValues %>%
-  filter(R == 1) %>% count(D, sort = TRUE) # all good to proceed.
+  filter(R == 1) %>% count(D, sort = TRUE) %>% collect() # all good to proceed.
 
-# Save Data as a csv file.
-write_rds(ComplexValues, paste0(filePath, 'GlobalComplexity.csv'))
+#################################################
+# STEP 5: Generate Initial Global Rasters
+#################################################
 
-##### ------------------------------------------------------------- End of Code --------------------------------##### ------------------------------------------------------------- End of Code --------------------------------
+# Extract spatial coordinates
+coords <- cbind(as.numeric(ComplexValues[['Lon']]), as.numeric(ComplexValues[['Lat']]))
+
+# Convert pixel values of interest into a spatial data frame (be patient, this is a slow running process)
+# Complexity values
+HRange <- suppressWarnings(SpatialPixelsDataFrame(coords, data = data.frame(as.numeric(ComplexValues[['H']])), proj4string = CRS(Molle)))
+Rugosity <- suppressWarnings(SpatialPixelsDataFrame(coords, data = data.frame(as.numeric(ComplexValues[['R']])), proj4string = CRS(Molle)))
+FracD <- suppressWarnings(SpatialPixelsDataFrame(coords, data = data.frame(as.numeric(ComplexValues[['D']])), proj4string = CRS(Molle)))
+# Terrestrial mask
+LandMask <- suppressWarnings(SpatialPixelsDataFrame(coords, data = data.frame(as.numeric(ComplexValues[['Terrestrial']])), proj4string = CRS(Molle)))
+# Assign raster value IDs
+names(HRange) <- 'H'
+names(Rugosity) <- 'R'
+names(FracD) <- 'D'
+names(LandMask) <- 'Land'
+
+# And convert to raster files
+# Height range
+HRast <- rast(HRange, layer = 'H')
+# Rugosity
+RRast <- rast(Rugosity, layer = 'R')
+# Fractal Dimension
+DRast <- rast(FracD, layer = 'D')
+# Land Template
+MaskRast <- rast(LandMask, layer = 'Land')
+
+# view to confirm appropriate mollweide projection
+plot(HRast)
+plot(RRast)
+plot(DRast)
+plot(MaskRast)
+
+#################################################
+# STEP 6: Final Quality Control
+#################################################
+
+# Evaluate data ranges
+# Fractal Dimension
+range(values(DRast), na.rm = TRUE) # should be between 2 and 3.
+hist(values(DRast)) # skewed normal distribution - could be due to the mix of estimates from across both terrestrial and marine environments?
+
+# Rugosity 
+range(values(RRast), na.rm = TRUE) # should be greater than or equal to 1
+hist(values(RRast)) # Clear Poisson distribution
+# Following Torres-Pulliza et al (2020) Rugosity can be standardized to (R^2)-1
+R_Rast <- app(RRast, fun = function(x) { (x^2)-1 })
+hist(log10(values(R_Rast))) # transformed to normal
+
+# Height Range
+range(values(HRast), na.rm = TRUE) # must be non-negative
+hist(values(HRast)) # Again, a clear poisson distribution
+# Following Torres-Pulliza et al (2020) Height range can be standardized to HR/sqrt(2)*L0
+HR_Rast <- app(HRast, fun = function(x) { x/(sqrt(2)*L0) })
+hist(log10(values(HR_Rast))) # transformed to normal
+
+# Ensure the extents and resolutions match expectations and across rasters
+res(HR_Rast) == c(L,L)
+res(R_Rast) == c(L,L)
+res(DRast) == c(L,L)
+res(MaskRast) == c(L,L)
+ext(HR_Rast) == ext(R_Rast)
+ext(R_Rast) == ext(DRast)
+ext(DRast) == ext(MaskRast)
+
+#################################################
+# STEP 7: Save Finalized Raster Outputs
+#################################################
+
+writeRaster(HR_Rast, paste0(FinalSave, 'GlobalHeightRange.tif'))
+writeRaster(R_Rast, paste0(FinalSave, 'GlobalRugosity.tif'))
+writeRaster(DRast, paste0(FinalSave, 'GlobalFractalDimension.tif'))
+writeRaster(MaskRast, paste0(FinalSave, 'LandMask.tif'))
+
+## ------------------------------------------------------------- End of Code ---------------------------------------
