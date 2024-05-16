@@ -321,6 +321,7 @@ ggplot(LandUseDF, aes(x = Dmean, y=Rmean)) +
                      legend.box.background = element_rect(colour = 0)) +
   theme(axis.line = element_line(color = 'black'))
 
+
 ######################################
 # STEP 6: Analyse ecosystem complexity patterns 
 ######################################
@@ -337,6 +338,9 @@ EcoTypesDF$Rpredict <- 10^(predict(EcoTypesMod2)[,1]) # mean fit
 # confidence bounds
 EcoTypesDF$Rlower <- 10^(predict(EcoTypesMod2)[,3]) # 2.5% 
 EcoTypesDF$Rupper <- 10^(predict(EcoTypesMod2)[,4]) # 97.5% 
+
+# Also predict how this model appears on the Land Use plot
+LandUseDF$Rpredict <- 10^(predict(EcoTypesMod2, newdata = LandUseDF)[,1]) # mean fit only
 
 # add regression lines to the ecosystem typology plot
 ggplot(EcoTypesDF, aes(x=Dmean, y=Rmean)) +
@@ -377,6 +381,37 @@ ggplot(EcoTypesDF, aes(x=Dmean, y=Rmean)) +
 
 # Extract estimate of model fit
 bayes_R2(EcoTypesMod2)
+
+# Recreate Land Use plot with fit line
+ggplot(LandUseDF, aes(x = Dmean, y=Rmean)) +
+  geom_line(aes(x = Dmean, y = Rpredict), col = 'black', linetype = 'solid', linewidth = 1.5, alpha = 1) +
+  geom_rect(aes(xmin = 2.232, xmax = 2.245, ymin = 0.0017, ymax = 0.005), fill = NA, linetype = 'solid', col = 'red', linewidth = 1.5) +
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.250, yend = Rmean), 
+               data = Urban, color = "#440154FF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Urban
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.250, yend = Rmean), 
+               data = Cropland1, color = "#481D6FFF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Cropland
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.255, yend = 0.008), 
+               data = Cropland2, color = "#481D6FFF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Mosaic Vegetation/Cropland
+  geom_point(aes(color = Cat_Name), size = 7) +
+  xlab('\nFractal Dimension') +
+  ylab('Rugosity\n') +
+  scale_y_continuous(trans = 'log10') +
+  scale_color_manual(values = viridis(n = length(unique(LandUseDF$Cat_Name)), option = 'cividis'),
+                     limits = c("Urban","Cropland","Mosaic Vegetation/Cropland","Mosaic Vegetation",
+                                "Grassland","Shrubland","Lichens & Mosses","Sparse Vegetation",         
+                                "Mixed Tree Cover","Tree Cover (Needleleaved)","Tree Cover (Broadleaved)",
+                                'Wetlands',"Bare substrate","Permenant Snow & Ice"),
+                     guide = guide_legend(title = 'Land Cover Type', 
+                                          reverse = F, label = T,
+                                          na.value = "white")) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     axis.title = element_text(size = 15, colour = 'black'),
+                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
+                     panel.border = element_blank(),
+                     legend.background = element_blank(),
+                     legend.box.background = element_rect(colour = 0)) +
+  theme(axis.line = element_line(color = 'black'))
 
 
 ######################################
