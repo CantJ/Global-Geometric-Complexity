@@ -60,8 +60,6 @@ set.seed(45560)
 # Modify R digit printing to prevent the rounding of very close values
 options(digits = 22)
 
-
-
 # Define number of Monte Carlo simulations
 mcSim <- 1000
 

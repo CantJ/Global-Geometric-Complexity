@@ -293,7 +293,6 @@ Cropland2 <- LandUseDF[LandUseDF$Cat_Name == 'Mosaic Vegetation/Cropland',]
 
 # Create plot
 ggplot(LandUseDF, aes(x = Dmean, y=Rmean)) +
-  geom_rect(aes(xmin = 2.232, xmax = 2.245, ymin = 0.0017, ymax = 0.005), fill = NA, linetype = 'solid', col = 'red', linewidth = 1.5) +
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.250, yend = Rmean), 
                data = Urban, color = "#440154FF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Urban
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.250, yend = Rmean), 
@@ -385,7 +384,6 @@ bayes_R2(EcoTypesMod2)
 # Recreate Land Use plot with fit line
 ggplot(LandUseDF, aes(x = Dmean, y=Rmean)) +
   geom_line(aes(x = Dmean, y = Rpredict), col = 'black', linetype = 'solid', linewidth = 1.5, alpha = 1) +
-  geom_rect(aes(xmin = 2.232, xmax = 2.245, ymin = 0.0017, ymax = 0.005), fill = NA, linetype = 'solid', col = 'red', linewidth = 1.5) +
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.250, yend = Rmean), 
                data = Urban, color = "#440154FF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Urban
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.250, yend = Rmean), 
@@ -483,6 +481,12 @@ Feature4R_df <- as.data.frame(as(raster(Feature4R), "SpatialPixelsDataFrame"))
 colnames(Feature1D_df) <- colnames(Feature1R_df) <- colnames(Feature2D_df) <- colnames(Feature2R_df) <-
   colnames(Feature3D_df) <- colnames(Feature3R_df) <- colnames(Feature4D_df) <- colnames(Feature4R_df) <- c("value", "x", "y")
 
+# identify the maximum and minimum fractal dimension and rugosity estimates across these selected features (to keep plot colour scales consistent)
+maxD <- ceiling(max(c(Feature1D_df$value, Feature2D_df$value, Feature3D_df$value, Feature4D_df$value),na.rm = T)*10)/10 # this little trick ensures the value is rounded up (at one decimal place)
+maxR <- log10(ceiling(max(c(Feature1R_df$value, Feature2R_df$value, Feature3R_df$value, Feature4R_df$value),na.rm = T)*10)/10)
+minD <- floor(min(c(Feature1D_df$value, Feature2D_df$value, Feature3D_df$value, Feature4D_df$value),na.rm = T)*10)/10
+minR <- -12
+
 # 1. Amazon Basin
 # Fractal Dimension
 ggplot(aes(x = x, y = y), data = Feature1D_df) +
@@ -490,6 +494,7 @@ ggplot(aes(x = x, y = y), data = Feature1D_df) +
   xlab(NULL) +
   ylab(NULL) +
   scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
+                       limits = c(minD,maxD),
                        guide = guide_colorbar(ticks = F, title = 'D',
                                               reverse = F, label = T,
                                               na.value = "white")) +
@@ -509,6 +514,7 @@ ggplot(aes(x = x, y = y), data = Feature1R_df) +
   xlab(NULL) +
   ylab(NULL) +
   scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
+                       limits = c(minR, maxR),
                        guide = guide_colorbar(ticks = F, title = expression('log'[10]*'(R)'),
                                               reverse = F, label = T,
                                               na.value = "white")) +
@@ -529,6 +535,7 @@ ggplot(aes(x = x, y = y), data = Feature2D_df) +
   xlab(NULL) +
   ylab(NULL) +
   scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
+                       limits = c(minD,maxD),
                        guide = guide_colorbar(ticks = F, title = 'D',
                                               reverse = F, label = T,
                                               na.value = "white")) +
@@ -548,6 +555,7 @@ ggplot(aes(x = x, y = y), data = Feature2R_df) +
   xlab(NULL) +
   ylab(NULL) +
   scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
+                       limits = c(minR, maxR),
                        guide = guide_colorbar(ticks = F, title = expression('log'[10]*'(R)'),
                                               reverse = F, label = T,
                                               na.value = "white")) +
@@ -568,6 +576,7 @@ ggplot(aes(x = x, y = y), data = Feature3D_df) +
   xlab(NULL) +
   ylab(NULL) +
   scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
+                       limits = c(minD,maxD),
                        guide = guide_colorbar(ticks = F, title = 'D',
                                               reverse = F, label = T,
                                               na.value = "white")) +
@@ -587,6 +596,7 @@ ggplot(aes(x = x, y = y), data = Feature3R_df) +
   xlab(NULL) +
   ylab(NULL) +
   scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
+                       limits = c(minR, maxR),
                        guide = guide_colorbar(ticks = F, title = expression('log'[10]*'(R)'),
                                               reverse = F, label = T,
                                               na.value = "white")) +
@@ -607,6 +617,7 @@ ggplot(aes(x = x, y = y), data = Feature4D_df) +
   xlab(NULL) +
   ylab(NULL) +
   scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
+                       limits = c(minD,maxD),
                        guide = guide_colorbar(ticks = F, title = 'D',
                                               reverse = F, label = T,
                                               na.value = "white")) +
@@ -626,6 +637,7 @@ ggplot(aes(x = x, y = y), data = Feature4R_df) +
   xlab(NULL) +
   ylab(NULL) +
   scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
+                       limits = c(minR, maxR),
                        guide = guide_colorbar(ticks = F, title = expression('log'[10]*'(R)'),
                                               reverse = F, label = T,
                                               na.value = "white")) +
