@@ -430,16 +430,14 @@ DCV <- quiet(as.data.frame(t(apply(sapply(CVmods, '[[', 'D'), 1, ci)))); DCV$D <
 HCV <- quiet(as.data.frame(t(apply(sapply(CVmods, '[[', 'H'), 1, ci)))); HCV$H <- Hvec; names(HCV) <- c('CV','Lower','Upper','SE','H') # Height Range
 
 # Plot relationships
-Nsize <- 2e+07 
-tmpData <- RawData %>% select(D, R2, H2, CV2) %>% collect() %>% sample_n(size = Nsize, replace = FALSE) # isolate plotting sample
 # Rugosity
 (CVRplot <- ggplot(RCV) +
-    geom_ribbon(aes(x = R, ymin = Lower, ymax = Upper), fill = '#fc8961', alpha = 0.2) +
-    geom_line(aes(x = R, y = CV), col = '#51127c', linewidth = 1.1, linetype = 'dashed') + 
+    geom_ribbon(aes(x = R, ymin = Lower, ymax = Upper), fill = '#fc8961', alpha = 0.5) +
+    geom_line(aes(x = R, y = CV), col = '#000004', linewidth = 1.1, linetype = 'dashed') + 
     xlab('\nRugosity') +
     ylab('Climate Variability\n') +
-    scale_x_continuous(expand = c(0,0)) +
-    scale_y_continuous(labels = function(i) format((10^i)-1, digits = 2)) +
+    scale_x_continuous(expand = c(0,0), labels = function(i) format((10^i), digits = 2)) +
+    scale_y_continuous(limits = c(log10(0.65+1),log10(1.13+1)), labels = function(i) format((10^i)-1, digits = 2)) +
     scale_fill_gradientn(colours = viridis(n = 50, option = 'cividis'),
                          guide = guide_colorbar(ticks = F, title = 'Density',
                                                 reverse = F, label = T,
@@ -454,12 +452,12 @@ tmpData <- RawData %>% select(D, R2, H2, CV2) %>% collect() %>% sample_n(size = 
 
 # Height Range
 (CVHplot <- ggplot(HCV) +
-    geom_ribbon(aes(x = H, ymin = Lower, ymax = Upper), fill = '#fcffa4', alpha = 0.3) +
-    geom_line(aes(x = H, y = CV), col = '#bc3754', linewidth = 1.1, linetype = 'dashed') + 
+    geom_ribbon(aes(x = H, ymin = Lower, ymax = Upper), fill = '#fc8961', alpha = 0.7) +
+    geom_line(aes(x = H, y = CV), col = '#000004', linewidth = 1.1, linetype = 'dashed') + 
     xlab('\nHeight Range') +
     ylab('Climate Variability\n') +
-    scale_x_continuous(expand = c(0,0)) +
-    scale_y_continuous(labels = function(i) format((10^i)-1, digits = 2)) +
+    scale_x_continuous(expand = c(0,0), breaks = c(log10(10), log10(1), log10(1e-02), log10(1e-4), log10(1e-6)), labels = function(i) 10^i) +
+    scale_y_continuous(limits = c(log10(0.65+1),log10(1.13+1)), labels = function(i) format((10^i)-1, digits = 2)) +
     scale_fill_gradientn(colours = viridis(n = 50, option = 'cividis'),
                          guide = guide_colorbar(ticks = F, title = 'Density',
                                                 reverse = F, label = T,
@@ -474,12 +472,12 @@ tmpData <- RawData %>% select(D, R2, H2, CV2) %>% collect() %>% sample_n(size = 
 
 # Fractal Dimension
 (CVDplot <- ggplot(DCV) +
-    geom_ribbon(aes(x = D, ymin = Lower, ymax = Upper), fill = '#51127c', alpha = 0.2) +
+    geom_ribbon(aes(x = D, ymin = Lower, ymax = Upper), fill = '#fc8961', alpha = 0.5) +
     geom_line(aes(x = D, y = CV), col = '#000004', linewidth = 1.1, linetype = 'dashed') + 
     xlab('\nFractal Dimension') +
     ylab('Climate Variability\n') +
     scale_x_continuous(expand = c(0,0)) +
-    scale_y_continuous(labels = function(i) format((10^i)-1, digits = 2)) +
+    scale_y_continuous(limits = c(log10(0.6+1),log10(1.13+1)), labels = function(i) format((10^i)-1, digits = 2)) +
     scale_fill_gradientn(colours = viridis(n = 50, option = 'cividis'),
                          guide = guide_colorbar(ticks = F, title = 'Density',
                                                 reverse = F, label = T,
