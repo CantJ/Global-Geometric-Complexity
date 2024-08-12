@@ -129,6 +129,16 @@ DRast <- mask(DRast, GRast, maskvalues = NA)
 RRast <- mask(RRast, GRast, maskvalues = NA)
 HRast <- mask(HRast, GRast, maskvalues = NA)
 
+# # Estimate spatial autocorrelation of terrestrial complexity measures.
+# Define nearest neighbor matrix (queens format - diagonals included)
+w <- matrix(c(1,1,1,1,0,1,1,1,1), nrow = 3)
+
+#test for spatial autocorrelation using Moran's I (-1 < I > 1)
+# Estimate Moran's I (can take a while to complete)
+D_I <- terra::autocor(DRast, w, method = 'moran', global = TRUE)
+R_I <- terra::autocor(RRast, w, method = 'moran', global = TRUE)  
+H_I <- terra::autocor(HRast, w, method = 'moran', global = TRUE) 
+
 # plot global maps (for possible use in figures)
 # Fractal Dimension
 plot(DRast, col = magma(100, direction = -1), 
