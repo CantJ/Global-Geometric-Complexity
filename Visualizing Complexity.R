@@ -19,6 +19,7 @@ library(stringr)
 library(dplyr)
 library(brms)
 library(habtools)
+library(fishualize)
 
 # is this the first time running the below script? i.e. does the ecosystem typology zipped folder needed unpacking
 FirstRun <- FALSE
@@ -40,21 +41,21 @@ HRast <- rast(paste0(ComplexRast, 'GlobalHeightRange.tif'))
 
 # plot maps
 # Fractal Dimension
-plot(DRast, col = magma(100, direction = -1), 
+plot(DRast, col = fish(50, direction = -1, option = 'Variola_louti'),
      buffer = FALSE,
      plg = list(x = 'bottom', at = c(2,3), digits = 1, tic = 'none', size = c(1,2.5)),
      box = FALSE, 
      axes = FALSE)
 
 # Rugosity
-plot(log10(RRast), col = cividis(100, direction = 1), 
+plot(log10(RRast), col = fish(50, direction = 1, option = 'Ostracion_whitleyi'),
      buffer = FALSE, 
      plg = list(x = 'bottom', at = c(-12,0), tic = 'none', size = c(1,2.5)),
      box = FALSE, 
      axes = FALSE)
 
 # Height Range
-plot(log10(HRast), col = cividis(100, direction = -1), 
+plot(log10(HRast), col = fish(50, direction = 1, option = 'Acanthurus_leucosternon'), 
      buffer = FALSE, 
      plg = list(x = 'bottom', at = c(-5,0), tic = 'none', size = c(1,2.5)),
      box = FALSE, 
