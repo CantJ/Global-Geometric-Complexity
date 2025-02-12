@@ -20,6 +20,7 @@ library(dplyr)
 library(brms)
 library(habtools)
 library(fishualize)
+library(sf)
 
 # is this the first time running the below script? i.e. does the ecosystem typology zipped folder needed unpacking
 FirstRun <- FALSE
@@ -244,42 +245,46 @@ LandUseDF <- read.csv(paste0(FilePath, 'LandUseComplexity.csv'))
 Location1 <- EcoTypesDF[EcoTypesDF$Dmean == min(EcoTypesDF$Dmean),] # Seamounts
 Location2 <- EcoTypesDF[EcoTypesDF$Rmean == min(EcoTypesDF$Rmean),] # Sub-glacial Lakes
 Location3 <- EcoTypesDF[EcoTypesDF$Rmean == max(EcoTypesDF$Rmean),] # Oceanic temperate Rainforests
-Location4 <- EcoTypesDF[which(EcoTypesDF$Realm == 'T' & EcoTypesDF$Biome == 6 & EcoTypesDF$EFG == 2),] # Polar Alpine Cliffs 
-Location5 <- EcoTypesDF[which(EcoTypesDF$Realm == 'MT' & EcoTypesDF$Biome == 1 & EcoTypesDF$EFG == 1),] # Rocky Shores
-Location6 <- EcoTypesDF[which(EcoTypesDF$Realm == 'TF' & EcoTypesDF$Biome == 1 & EcoTypesDF$EFG == 3),] # Permanent marshes
-Location7 <- EcoTypesDF[which(EcoTypesDF$Realm == 'M' & EcoTypesDF$Biome == 3 & EcoTypesDF$EFG == 3),] # Abyssal Plains
-Location8 <- EcoTypesDF[which(EcoTypesDF$Realm == 'F' & EcoTypesDF$Biome == 2 & EcoTypesDF$EFG == 6),] # Permanent Salt Lakes
+Location4 <- EcoTypesDF[which(EcoTypesDF$Realm == 'T' & EcoTypesDF$Biome == 6 & EcoTypesDF$EFG == 3),] # Polar Tundra
+Location5 <- EcoTypesDF[EcoTypesDF$Dmean == max(EcoTypesDF$Dmean),] # Coastal River Deltas
+Location6 <- EcoTypesDF[which(EcoTypesDF$Realm == 'F' & EcoTypesDF$Biome == 2 & EcoTypesDF$EFG == 6),] # Permanent salt lakes
+Location7 <- EcoTypesDF[which(EcoTypesDF$Realm == 'TF' & EcoTypesDF$Biome == 1 & EcoTypesDF$EFG == 3),] # Permanent marshland
+
+# Reformat variables to aid visualization clarity
+EcoTypesDF$Realm_2 <- factor(EcoTypesDF$Realm_2,
+                           levels = c('Marine', 'Subterranean', 'Freshwater', 'Terrestrial', 'Coastal', 'Wetland'))
 
 # Create plot
 ggplot(EcoTypesDF, aes(x=Dmean, y=Rmean)) +
+  geom_hline(aes(yintercept = 0.003), linetype = "dashed", col = 'gray50', linewidth = 1.5) +
+  geom_vline(aes(xintercept = 2.235), linetype = "dashed", col = 'gray50', linewidth = 1.5) +
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.15, yend = 0.05), 
-               data = Location1, color = "#2A788EFF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Seamounts
+               data = Location1, color = "#00204DFF", linewidth = 2, alpha = 1, linetype = 'dashed') + # Seamounts
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.245, yend = 0.00021), 
-               data = Location2, color = "#414487FF", linewidth = 1.5, alpha = 0.7, linetype = 'dashed') + # Subglacial Lakes
+               data = Location2, color = "lightblue", linewidth = 2, alpha = 0.7, linetype = 'dashed') + # Subglacial Lakes
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.31, yend = 0.1), 
-               data = Location3, color = "#BCAF6FFF", linewidth = 1.5, alpha = 0.7, linetype = 'dashed') + # Oceanic Temperate Forests
+               data = Location3, color = "#5F9258FF", linewidth = 2, alpha = 0.7, linetype = 'dashed') + # Oceanic Temperate Forests
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.33, yend = Rmean), 
-               data = Location4, color = "#BCAF6FFF", linewidth = 1.5, alpha = 0.7, linetype = 'dashed') + # Polar Alpine Rock
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.31, yend = 0.0095), 
-               data = Location5, color = "#440154FF", linewidth = 1.5, alpha = 0.7, linetype = 'dashed') + # Rocky shorelines
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.35, yend = 0.00015), 
-               data = Location6, color = "#FDE725FF", linewidth = 1.5, alpha = 0.9, linetype = 'dashed') + # Permanent Marshes
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.15, yend = 0.001), 
-               data = Location7, color = "#2A788EFF", linewidth = 1.5, alpha = 0.9, linetype = 'dashed') + # Abyssal Plains
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.15, yend = 0.0003), 
-               data = Location8, color = "#414487FF", linewidth = 1.5, alpha = 0.9, linetype = 'dashed') + # Permanent Salt Lakes
-  geom_point(aes(color = Realm_2), size = 7) +
-  xlab('\nFractal Dimension') +
-  ylab('Rugosity\n') +
+               data = Location4, color = "#5F9258FF", linewidth = 2, alpha = 0.7, linetype = 'dashed') + # Polar Tundra
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.34, yend = 0.0005), 
+               data = Location5, color = "#CBBA69FF", linewidth = 2, alpha = 0.7, linetype = 'dashed') + # Coastal River Deltas
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.16, yend = 0.0003), 
+               data = Location6, color = "lightblue", linewidth = 2, alpha = 0.9, linetype = 'dashed') + # Permanent Salt Lakes
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.34, yend = 0.00018), 
+               data = Location7, color = "#FDE725FF", linewidth = 2, alpha = 0.9, linetype = 'dashed') + # Permanent Marsh
+  geom_point(aes(color = Realm_2), size = 9) +
+  xlab(NULL) + # Fractal Dimension
+  ylab(NULL) + # Rugosity
   scale_y_continuous(trans = 'log10') +
-  scale_color_manual(values = viridis(n = length(unique(EcoTypesDF$Realm_2)), option = 'cividis'),
+  scale_x_continuous(limits = c(2.12,2.34)) +
+  scale_color_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"),
                      guide = guide_legend(title = 'Realm', 
                                           reverse = F, label = T,
                                           na.value = "white")) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
+                     axis.text.x = element_text(size = 25, colour = "black"), axis.text.y = element_text(size = 25, colour = "black"),
                      panel.border = element_blank(),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = 0)) +
@@ -294,17 +299,20 @@ Cropland2 <- LandUseDF[LandUseDF$Cat_Name == 'Mosaic Vegetation/Cropland',]
 
 # Create plot
 ggplot(LandUseDF, aes(x = Dmean, y=Rmean)) +
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.250, yend = Rmean), 
-               data = Urban, color = "#440154FF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Urban
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.250, yend = Rmean), 
-               data = Cropland1, color = "#481D6FFF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Cropland
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.255, yend = 0.008), 
-               data = Cropland2, color = "#481D6FFF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Mosaic Vegetation/Cropland
-  geom_point(aes(color = Cat_Name), size = 7) +
-  xlab('\nFractal Dimension') +
-  ylab('Rugosity\n') +
+  geom_hline(aes(yintercept = 0.01), linetype = "dashed", col = 'gray50', linewidth = 1.5) +
+  geom_vline(aes(xintercept = 2.26), linetype = "dashed", col = 'gray50', linewidth = 1.5) +
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.225, yend = Rmean), 
+               data = Urban, color = "#000004FF", linewidth = 2, alpha = 1, linetype = 'dashed') + # Urban
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.225, yend = Rmean), 
+               data = Cropland1, color = "#0D0B2AFF", linewidth = 2, alpha = 1, linetype = 'dashed') + # Cropland
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.225, yend = 0.008), 
+               data = Cropland2, color = "#281259FF", linewidth = 2, alpha = 1, linetype = 'dashed') + # Mosaic Vegetation/Cropland
+  geom_point(aes(color = Cat_Name), size = 9) +
+  xlab(NULL) + # Fractal Dimension
+  ylab(NULL) + # Rugosity
   scale_y_continuous(trans = 'log10') +
-  scale_color_manual(values = viridis(n = length(unique(LandUseDF$Cat_Name)), option = 'cividis'),
+  scale_x_continuous(limits = c(2.21,2.30)) +
+  scale_color_manual(values = magma(n = length(unique(LandUseDF$Cat_Name))),
                      limits = c("Urban","Cropland","Mosaic Vegetation/Cropland","Mosaic Vegetation",
                                 "Grassland","Shrubland","Lichens & Mosses","Sparse Vegetation",         
                                 "Mixed Tree Cover","Tree Cover (Needleleaved)","Tree Cover (Broadleaved)",
@@ -315,14 +323,14 @@ ggplot(LandUseDF, aes(x = Dmean, y=Rmean)) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
                      panel.border = element_blank(),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = 0)) +
   theme(axis.line = element_line(color = 'black'))
 
 
-######################################
+#####################################
 # STEP 6: Analyse ecosystem complexity patterns 
 ######################################
 
@@ -333,84 +341,8 @@ EcoTypesMod <- brm(log10(Rmean) ~ Dmean , data = EcoTypesDF, family = 'gaussian'
 EcoTypesMod2 <- brm(log10(Rmean) ~ Dmean + I(Dmean^2), data = EcoTypesDF, family = 'gaussian', chains = 20, iter = 5000, warmup = 1000)
 model_weights(EcoTypesMod, EcoTypesMod2, weights = 'loo') # none-linear is the better fit
 
-# Extract regression predicted lines from selected model
-EcoTypesDF$Rpredict <- 10^(predict(EcoTypesMod2)[,1]) # mean fit
-# confidence bounds
-EcoTypesDF$Rlower <- 10^(predict(EcoTypesMod2)[,3]) # 2.5% 
-EcoTypesDF$Rupper <- 10^(predict(EcoTypesMod2)[,4]) # 97.5% 
-
-# Also predict how this model appears on the Land Use plot
-LandUseDF$Rpredict <- 10^(predict(EcoTypesMod2, newdata = LandUseDF)[,1]) # mean fit only
-
-# add regression lines to the ecosystem typology plot
-ggplot(EcoTypesDF, aes(x=Dmean, y=Rmean)) +
-  geom_ribbon(aes(ymin = Rlower, ymax = Rupper), fill = 'gray', alpha = 0.2) +
-  geom_line(aes(y = Rpredict, x = Dmean), col = 'black', linetype = 'solid', linewidth = 2, alpha = 0.8) +
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.15, yend = 0.05), 
-               data = Location1, color = "#2A788EFF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Seamounts
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.245, yend = 0.00021), 
-               data = Location2, color = "#414487FF", linewidth = 1.5, alpha = 0.7, linetype = 'dashed') + # Subglacial Lakes
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.31, yend = 0.1), 
-               data = Location3, color = "#BCAF6FFF", linewidth = 1.5, alpha = 0.7, linetype = 'dashed') + # Oceanic Temperate Forests
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.33, yend = Rmean), 
-               data = Location4, color = "#BCAF6FFF", linewidth = 1.5, alpha = 0.7, linetype = 'dashed') + # Polar Alpine Rock
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.31, yend = 0.0095), 
-               data = Location5, color = "#440154FF", linewidth = 1.5, alpha = 0.7, linetype = 'dashed') + # Rocky shorelines
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.35, yend = 0.00015), 
-               data = Location6, color = "#FDE725FF", linewidth = 1.5, alpha = 0.9, linetype = 'dashed') + # Permanent Marshes
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.15, yend = 0.001), 
-               data = Location7, color = "#2A788EFF", linewidth = 1.5, alpha = 0.9, linetype = 'dashed') + # Abyssal Plains
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.15, yend = 0.0003), 
-               data = Location8, color = "#414487FF", linewidth = 1.5, alpha = 0.9, linetype = 'dashed') + # Permanent Salt Lakes
-  geom_point(aes(color = Realm_2), size = 7) +
-  xlab('\nFractal Dimension') +
-  ylab('Rugosity\n') +
-  scale_y_continuous(trans = 'log10') +
-  scale_color_manual(values = viridis(n = length(unique(EcoTypesDF$Realm_2)), option = 'cividis'),
-                     guide = guide_legend(title = 'Realm', 
-                                          reverse = F, label = T,
-                                          na.value = "white")) +
-  theme_bw() + theme(panel.grid.major = element_blank(),
-                     panel.grid.minor = element_blank(),
-                     axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
-                     panel.border = element_blank(),
-                     legend.background = element_blank(),
-                     legend.box.background = element_rect(colour = 0)) +
-  theme(axis.line = element_line(color = 'black'))
-
 # Extract estimate of model fit
 bayes_R2(EcoTypesMod2)
-
-# Recreate Land Use plot with fit line
-ggplot(LandUseDF, aes(x = Dmean, y=Rmean)) +
-  geom_line(aes(x = Dmean, y = Rpredict), col = 'black', linetype = 'solid', linewidth = 1.5, alpha = 1) +
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.250, yend = Rmean), 
-               data = Urban, color = "#440154FF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Urban
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.250, yend = Rmean), 
-               data = Cropland1, color = "#481D6FFF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Cropland
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.255, yend = 0.008), 
-               data = Cropland2, color = "#481D6FFF", linewidth = 1.5, alpha = 1, linetype = 'dashed') + # Mosaic Vegetation/Cropland
-  geom_point(aes(color = Cat_Name), size = 7) +
-  xlab('\nFractal Dimension') +
-  ylab('Rugosity\n') +
-  scale_y_continuous(trans = 'log10') +
-  scale_color_manual(values = viridis(n = length(unique(LandUseDF$Cat_Name)), option = 'cividis'),
-                     limits = c("Urban","Cropland","Mosaic Vegetation/Cropland","Mosaic Vegetation",
-                                "Grassland","Shrubland","Lichens & Mosses","Sparse Vegetation",         
-                                "Mixed Tree Cover","Tree Cover (Needleleaved)","Tree Cover (Broadleaved)",
-                                'Wetlands',"Bare substrate","Permenant Snow & Ice"),
-                     guide = guide_legend(title = 'Land Cover Type', 
-                                          reverse = F, label = T,
-                                          na.value = "white")) +
-  theme_bw() + theme(panel.grid.major = element_blank(),
-                     panel.grid.minor = element_blank(),
-                     axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
-                     panel.border = element_blank(),
-                     legend.background = element_blank(),
-                     legend.box.background = element_rect(colour = 0)) +
-  theme(axis.line = element_line(color = 'black'))
 
 
 ######################################
@@ -426,7 +358,8 @@ Moll <- crs(DRast)
 
 ## 1. Amazon Basin
 # Calculate mollweide coordinates from lat longs obtained from Google Earth
-FeatureCoords1 <- matrix(c(-62.2159, -2.4653), ncol = 2)
+GPS1 <- c(-62.2159, -2.4653)
+FeatureCoords1 <- matrix(GPS1, ncol = 2)
 FeatureCoords1 <- spTransform(SpatialPoints(FeatureCoords1, CRS('+proj=longlat')), CRS(Moll))@coords
 # Crop the complexity rasters around these selected points
 Feature1D <- dem_crop(DRast, x0 = FeatureCoords1[1], y0 = FeatureCoords1[2], L = L*500, plot = FALSE)
@@ -457,61 +390,48 @@ Feature3R <- dem_crop(RRast, x0 = FeatureCoords3[1], y0 = FeatureCoords3[2], L =
 mean(values(Feature3D), na.rm = TRUE)
 mean(values(Feature3R), na.rm = TRUE)
 
-## 4. Great Barrier Reef
-# Calculate mollweide coordinates from lat longs obtained from Google Earth
-FeatureCoords4 <- matrix(c(147.6992, -18.2871), ncol = 2)
-FeatureCoords4 <- spTransform(SpatialPoints(FeatureCoords4, CRS('+proj=longlat')), CRS(Moll))@coords
-# Crop the complexity rasters around these selected points
-Feature4D <- dem_crop(DRast, x0 = FeatureCoords4[1], y0 = FeatureCoords4[2], L = L*500, plot = FALSE)
-Feature4R <- dem_crop(RRast, x0 = FeatureCoords4[1], y0 = FeatureCoords4[2], L = L*500, plot = FALSE)
-# Estimate mean complexity values
-mean(values(Feature4D), na.rm = TRUE)
-mean(values(Feature4R), na.rm = TRUE)
-
 ## Plot Global Features
-
+newproj <- "+proj=merc"
 # Convert data into data-frames (required for plotting rasters using ggplot)
-Feature1D_df <- as.data.frame(as(raster(Feature1D), "SpatialPixelsDataFrame"))
-Feature1R_df <- as.data.frame(as(raster(Feature1R), "SpatialPixelsDataFrame"))
-Feature2D_df <- as.data.frame(as(raster(Feature2D), "SpatialPixelsDataFrame"))
-Feature2R_df <- as.data.frame(as(raster(Feature2R), "SpatialPixelsDataFrame"))
-Feature3D_df <- as.data.frame(as(raster(Feature3D), "SpatialPixelsDataFrame"))
-Feature3R_df <- as.data.frame(as(raster(Feature3R), "SpatialPixelsDataFrame"))
-Feature4D_df <- as.data.frame(as(raster(Feature4D), "SpatialPixelsDataFrame"))
-Feature4R_df <- as.data.frame(as(raster(Feature4R), "SpatialPixelsDataFrame"))
+Feature1D_df <- st_as_sf(terra::as.points(Feature1D))
+Feature1R_df <- st_as_sf(terra::as.points(Feature1R))
+Feature2D_df <- as.data.frame(as(projectRaster(raster(Feature2D), crs = newproj), "SpatialPixelsDataFrame"))
+Feature2R_df <- as.data.frame(as(projectRaster(raster(Feature2R), crs = newproj), "SpatialPixelsDataFrame"))
+Feature3D_df <- as.data.frame(as(projectRaster(raster(Feature3D), crs = newproj), "SpatialPixelsDataFrame"))
+Feature3R_df <- as.data.frame(as(projectRaster(raster(Feature3R), crs = newproj), "SpatialPixelsDataFrame"))
 colnames(Feature1D_df) <- colnames(Feature1R_df) <- colnames(Feature2D_df) <- colnames(Feature2R_df) <-
-  colnames(Feature3D_df) <- colnames(Feature3R_df) <- colnames(Feature4D_df) <- colnames(Feature4R_df) <- c("value", "x", "y")
+  colnames(Feature3D_df) <- colnames(Feature3R_df) <- c("value", "x", "y")
 
 # identify the maximum and minimum fractal dimension and rugosity estimates across these selected features (to keep plot colour scales consistent)
-maxD <- ceiling(max(c(Feature1D_df$value, Feature2D_df$value, Feature3D_df$value, Feature4D_df$value),na.rm = T)*10)/10 # this little trick ensures the value is rounded up (at one decimal place)
-maxR <- log10(ceiling(max(c(Feature1R_df$value, Feature2R_df$value, Feature3R_df$value, Feature4R_df$value),na.rm = T)*10)/10)
-minD <- floor(min(c(Feature1D_df$value, Feature2D_df$value, Feature3D_df$value, Feature4D_df$value),na.rm = T)*10)/10
+maxD <- ceiling(max(c(Feature1D_df$value, Feature2D_df$value, Feature3D_df$value),na.rm = T)*10)/10 # this little trick ensures the value is rounded up (at one decimal place)
+maxR <- log10(ceiling(max(c(Feature1R_df$value, Feature2R_df$value, Feature3R_df$value),na.rm = T)*10)/10)
+minD <- floor(min(c(Feature1D_df$value, Feature2D_df$value, Feature3D_df$value),na.rm = T)*10)/10
 minR <- -12
 
 # 1. Amazon Basin
 # Fractal Dimension
-ggplot(aes(x = x, y = y), data = Feature1D_df) +
-  geom_raster(aes(fill = value)) +
+ggplot(data = Feature1D_df) +
+  geom_sf(aes(col = D)) +
   xlab(NULL) +
   ylab(NULL) +
-  scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
+  scale_colour_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
                        limits = c(minD,maxD),
                        guide = guide_colorbar(ticks = F, title = 'D',
                                               reverse = F, label = T,
                                               na.value = "white")) +
-  coord_equal() +
+  coord_sf(expand = F) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
-                     legend.justification=c(0,0), legend.position=c(0.8,0.6),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
+                     legend.justification=c(0,0), legend.position=c(0.85,0.7),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = "black"))
 
 # Rugosity
-ggplot(aes(x = x, y = y), data = Feature1R_df) +
-  geom_raster(aes(fill = log10(value))) +
+ggplot(data = Feature1R_df) +
+  geom_sf(aes(col = log10(lyr.1))) +
   xlab(NULL) +
   ylab(NULL) +
   scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
@@ -519,13 +439,13 @@ ggplot(aes(x = x, y = y), data = Feature1R_df) +
                        guide = guide_colorbar(ticks = F, title = expression('log'[10]*'(R)'),
                                               reverse = F, label = T,
                                               na.value = "white")) +
-  coord_equal() +
+  coord_sf(expand = F) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
-                     legend.justification=c(0,0), legend.position=c(0.8,0.6),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.6),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = "black"))
 
@@ -545,7 +465,7 @@ ggplot(aes(x = x, y = y), data = Feature2D_df) +
                      panel.grid.minor = element_blank(),
                      plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
                      legend.justification=c(0,0), legend.position=c(0.8,0.1),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = "black"))
@@ -565,7 +485,7 @@ ggplot(aes(x = x, y = y), data = Feature2R_df) +
                      panel.grid.minor = element_blank(),
                      plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
                      legend.justification=c(0,0), legend.position=c(0.8,0.1),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = "black"))
@@ -586,7 +506,7 @@ ggplot(aes(x = x, y = y), data = Feature3D_df) +
                      panel.grid.minor = element_blank(),
                      plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
                      legend.justification=c(0,0), legend.position=c(0.8,0.6),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = "black"))
@@ -606,48 +526,7 @@ ggplot(aes(x = x, y = y), data = Feature3R_df) +
                      panel.grid.minor = element_blank(),
                      plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
-                     legend.justification=c(0,0), legend.position=c(0.8,0.6),
-                     legend.background = element_blank(),
-                     legend.box.background = element_rect(colour = "black"))
-
-# 4 Great Barrier Reef
-# Fractal Dimension
-ggplot(aes(x = x, y = y), data = Feature4D_df) +
-  geom_raster(aes(fill = value)) +
-  xlab(NULL) +
-  ylab(NULL) +
-  scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
-                       limits = c(minD,maxD),
-                       guide = guide_colorbar(ticks = F, title = 'D',
-                                              reverse = F, label = T,
-                                              na.value = "white")) +
-  coord_equal() +
-  theme_bw() + theme(panel.grid.major = element_blank(),
-                     panel.grid.minor = element_blank(),
-                     plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
-                     axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
-                     legend.justification=c(0,0), legend.position=c(0.8,0.6),
-                     legend.background = element_blank(),
-                     legend.box.background = element_rect(colour = "black"))
-
-# Rugosity
-ggplot(aes(x = x, y = y), data = Feature4R_df) +
-  geom_raster(aes(fill = log10(value))) +
-  xlab(NULL) +
-  ylab(NULL) +
-  scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
-                       limits = c(minR, maxR),
-                       guide = guide_colorbar(ticks = F, title = expression('log'[10]*'(R)'),
-                                              reverse = F, label = T,
-                                              na.value = "white")) +
-  coord_equal() +
-  theme_bw() + theme(panel.grid.major = element_blank(),
-                     panel.grid.minor = element_blank(),
-                     plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
-                     axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
                      legend.justification=c(0,0), legend.position=c(0.8,0.6),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = "black"))
