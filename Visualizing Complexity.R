@@ -284,7 +284,7 @@ ggplot(EcoTypesDF, aes(x=Dmean, y=Rmean)) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 25, colour = "black"), axis.text.y = element_text(size = 25, colour = "black"),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
                      panel.border = element_blank(),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = 0)) +
@@ -358,8 +358,7 @@ Moll <- crs(DRast)
 
 ## 1. Amazon Basin
 # Calculate mollweide coordinates from lat longs obtained from Google Earth
-GPS1 <- c(-62.2159, -2.4653)
-FeatureCoords1 <- matrix(GPS1, ncol = 2)
+FeatureCoords1 <- matrix(c(-62.2159, -2.4653), ncol = 2)
 FeatureCoords1 <- spTransform(SpatialPoints(FeatureCoords1, CRS('+proj=longlat')), CRS(Moll))@coords
 # Crop the complexity rasters around these selected points
 Feature1D <- dem_crop(DRast, x0 = FeatureCoords1[1], y0 = FeatureCoords1[2], L = L*500, plot = FALSE)
@@ -390,17 +389,15 @@ Feature3R <- dem_crop(RRast, x0 = FeatureCoords3[1], y0 = FeatureCoords3[2], L =
 mean(values(Feature3D), na.rm = TRUE)
 mean(values(Feature3R), na.rm = TRUE)
 
-## Plot Global Features
-newproj <- "+proj=merc"
 # Convert data into data-frames (required for plotting rasters using ggplot)
 Feature1D_df <- st_as_sf(terra::as.points(Feature1D))
 Feature1R_df <- st_as_sf(terra::as.points(Feature1R))
-Feature2D_df <- as.data.frame(as(projectRaster(raster(Feature2D), crs = newproj), "SpatialPixelsDataFrame"))
-Feature2R_df <- as.data.frame(as(projectRaster(raster(Feature2R), crs = newproj), "SpatialPixelsDataFrame"))
-Feature3D_df <- as.data.frame(as(projectRaster(raster(Feature3D), crs = newproj), "SpatialPixelsDataFrame"))
-Feature3R_df <- as.data.frame(as(projectRaster(raster(Feature3R), crs = newproj), "SpatialPixelsDataFrame"))
-colnames(Feature1D_df) <- colnames(Feature1R_df) <- colnames(Feature2D_df) <- colnames(Feature2R_df) <-
-  colnames(Feature3D_df) <- colnames(Feature3R_df) <- c("value", "x", "y")
+Feature2D_df <- st_as_sf(terra::as.points(Feature2D))
+Feature2R_df <- st_as_sf(terra::as.points(Feature2R))
+Feature3D_df <- st_as_sf(terra::as.points(Feature3D))
+Feature3R_df <- st_as_sf(terra::as.points(Feature3R))
+colnames(Feature1D_df)[1] <- colnames(Feature1R_df)[1] <- colnames(Feature2D_df)[1] <- colnames(Feature2R_df)[1] <-
+  colnames(Feature3D_df)[1] <- colnames(Feature3R_df)[1] <- "value"
 
 # identify the maximum and minimum fractal dimension and rugosity estimates across these selected features (to keep plot colour scales consistent)
 maxD <- ceiling(max(c(Feature1D_df$value, Feature2D_df$value, Feature3D_df$value),na.rm = T)*10)/10 # this little trick ensures the value is rounded up (at one decimal place)
@@ -411,10 +408,10 @@ minR <- -12
 # 1. Amazon Basin
 # Fractal Dimension
 ggplot(data = Feature1D_df) +
-  geom_sf(aes(col = D)) +
+  geom_sf(aes(col = value)) +
   xlab(NULL) +
   ylab(NULL) +
-  scale_colour_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
+  scale_colour_gradientn(colours = fish(50, direction = -1, option = 'Variola_louti'),
                        limits = c(minD,maxD),
                        guide = guide_colorbar(ticks = F, title = 'D',
                                               reverse = F, label = T,
@@ -425,17 +422,16 @@ ggplot(data = Feature1D_df) +
                      plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
                      axis.title = element_text(size = 15, colour = 'black'),
                      axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
-                     legend.justification=c(0,0), legend.position=c(0.85,0.7),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.8),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = "black"))
 
 # Rugosity
 ggplot(data = Feature1R_df) +
-  geom_sf(aes(col = log10(lyr.1))) +
+  geom_sf(aes(col = log10(value))) +
   xlab(NULL) +
   ylab(NULL) +
-  scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
-                       limits = c(minR, maxR),
+  scale_colour_gradientn(colours = fish(50, direction = 1, option = 'Ostracion_whitleyi'),
                        guide = guide_colorbar(ticks = F, title = expression('log'[10]*'(R)'),
                                               reverse = F, label = T,
                                               na.value = "white")) +
@@ -445,89 +441,87 @@ ggplot(data = Feature1R_df) +
                      plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
                      axis.title = element_text(size = 15, colour = 'black'),
                      axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
-                     legend.justification=c(0,0), legend.position=c(0.9,0.6),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.8),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = "black"))
 
 # 2. Mariana Trench
 # Fractal Dimension
-ggplot(aes(x = x, y = y), data = Feature2D_df) +
-  geom_raster(aes(fill = value)) +
+ggplot(data = Feature2D_df) +
+  geom_sf(aes(col = value)) +
   xlab(NULL) +
   ylab(NULL) +
-  scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
+  scale_colour_gradientn(colours = fish(50, direction = -1, option = 'Variola_louti'),
                        limits = c(minD,maxD),
                        guide = guide_colorbar(ticks = F, title = 'D',
                                               reverse = F, label = T,
                                               na.value = "white")) +
-  coord_equal() +
+  coord_sf(expand = F) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
                      axis.title = element_text(size = 15, colour = 'black'),
                      axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
-                     legend.justification=c(0,0), legend.position=c(0.8,0.1),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.8),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = "black"))
 
 # Rugosity
-ggplot(aes(x = x, y = y), data = Feature2R_df) +
-  geom_raster(aes(fill = log10(value))) +
+ggplot(data = Feature2R_df) +
+  geom_sf(aes(col = log10(value))) +
   xlab(NULL) +
   ylab(NULL) +
-  scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
-                       limits = c(minR, maxR),
+  scale_colour_gradientn(colours = fish(100, direction = 1, option = 'Ostracion_whitleyi'),
                        guide = guide_colorbar(ticks = F, title = expression('log'[10]*'(R)'),
                                               reverse = F, label = T,
                                               na.value = "white")) +
-  coord_equal() +
+  coord_sf(expand = F) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
                      axis.title = element_text(size = 15, colour = 'black'),
                      axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
-                     legend.justification=c(0,0), legend.position=c(0.8,0.1),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.8),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = "black"))
 
 # 3. Sahara Desert
 # Fractal Dimension
-ggplot(aes(x = x, y = y), data = Feature3D_df) +
-  geom_raster(aes(fill = value)) +
+ggplot(data = Feature3D_df) +
+  geom_sf(aes(col = value)) +
   xlab(NULL) +
   ylab(NULL) +
-  scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
+  scale_colour_gradientn(colours = fish(50, direction = -1, option = 'Variola_louti'),
                        limits = c(minD,maxD),
                        guide = guide_colorbar(ticks = F, title = 'D',
                                               reverse = F, label = T,
                                               na.value = "white")) +
-  coord_equal() +
+  coord_sf(expand = F) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
                      axis.title = element_text(size = 15, colour = 'black'),
                      axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
-                     legend.justification=c(0,0), legend.position=c(0.8,0.6),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.8),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = "black"))
 
 # Rugosity
-ggplot(aes(x = x, y = y), data = Feature3R_df) +
-  geom_raster(aes(fill = log10(value))) +
+ggplot(data = Feature3R_df) +
+  geom_sf(aes(col = log10(value))) +
   xlab(NULL) +
   ylab(NULL) +
-  scale_fill_gradientn(colours = viridis(n = 100, option = 'magma', direction = -1),
-                       limits = c(minR, maxR),
+  scale_colour_gradientn(colours = fish(100, direction = 1, option = 'Ostracion_whitleyi'),
                        guide = guide_colorbar(ticks = F, title = expression('log'[10]*'(R)'),
                                               reverse = F, label = T,
                                               na.value = "white")) +
-  coord_equal() +
+  coord_sf(expand = F) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
                      axis.title = element_text(size = 15, colour = 'black'),
                      axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
-                     legend.justification=c(0,0), legend.position=c(0.8,0.6),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.8),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = "black"))
 
