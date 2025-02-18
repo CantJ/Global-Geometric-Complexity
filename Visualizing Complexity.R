@@ -256,8 +256,10 @@ EcoTypesDF$Realm_2 <- factor(EcoTypesDF$Realm_2,
 
 # Create plot
 ggplot(EcoTypesDF, aes(x=Dmean, y=Rmean)) +
-  geom_hline(aes(yintercept = 0.003), linetype = "dashed", col = 'gray50', linewidth = 1.5) +
-  geom_vline(aes(xintercept = 2.235), linetype = "dashed", col = 'gray50', linewidth = 1.5) +
+  annotate('rect', xmin = 2.235, xmax = 2.35, ymin = 0.003, ymax = 0.11, fill = 'grey', alpha = 0.5) +
+  annotate('rect', xmin = 2.1, xmax = 2.235, ymin = 0.0001, ymax = 0.003, fill = 'grey', alpha = 0.2) +
+  geom_hline(aes(yintercept = 0.003), linetype = "dashed", col = 'black', linewidth = 1.5) +
+  geom_vline(aes(xintercept = 2.235), linetype = "dashed", col = 'black', linewidth = 1.5) +
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.15, yend = 0.05), 
                data = Location1, color = "#00204DFF", linewidth = 2, alpha = 1, linetype = 'dashed') + # Seamounts
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.245, yend = 0.00021), 
@@ -275,8 +277,8 @@ ggplot(EcoTypesDF, aes(x=Dmean, y=Rmean)) +
   geom_point(aes(color = Realm_2), size = 9) +
   xlab(NULL) + # Fractal Dimension
   ylab(NULL) + # Rugosity
-  scale_y_continuous(trans = 'log10') +
-  scale_x_continuous(limits = c(2.12,2.34)) +
+  scale_y_continuous(trans = 'log10', breaks = c(0.0002, 0.001, 0.01, 0.1), labels = function(i) { format(i, scientific = F) }, expand = c(0,0)) +
+  scale_x_continuous(limits = c(2.10,2.35), expand = c(0,0)) +
   scale_color_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"),
                      guide = guide_legend(title = 'Realm', 
                                           reverse = F, label = T,
@@ -299,8 +301,10 @@ Cropland2 <- LandUseDF[LandUseDF$Cat_Name == 'Mosaic Vegetation/Cropland',]
 
 # Create plot
 ggplot(LandUseDF, aes(x = Dmean, y=Rmean)) +
-  geom_hline(aes(yintercept = 0.01), linetype = "dashed", col = 'gray50', linewidth = 1.5) +
-  geom_vline(aes(xintercept = 2.26), linetype = "dashed", col = 'gray50', linewidth = 1.5) +
+  annotate('rect', xmin = 2.255, xmax = 2.3, ymin = 0.01, ymax = 0.061, fill = 'grey', alpha = 0.5) +
+  annotate('rect', xmin = 2.208, xmax = 2.255, ymin = 0.0018, ymax = 0.01, fill = 'grey', alpha = 0.2) +
+  geom_hline(aes(yintercept = 0.01), linetype = "dashed", col = 'black', linewidth = 1.5) +
+  geom_vline(aes(xintercept = 2.255), linetype = "dashed", col = 'black', linewidth = 1.5) +
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.225, yend = Rmean), 
                data = Urban, color = "#000004FF", linewidth = 2, alpha = 1, linetype = 'dashed') + # Urban
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.225, yend = Rmean), 
@@ -310,8 +314,8 @@ ggplot(LandUseDF, aes(x = Dmean, y=Rmean)) +
   geom_point(aes(color = Cat_Name), size = 9) +
   xlab(NULL) + # Fractal Dimension
   ylab(NULL) + # Rugosity
-  scale_y_continuous(trans = 'log10') +
-  scale_x_continuous(limits = c(2.21,2.30)) +
+  scale_y_continuous(trans = 'log10', breaks = c(0.003, 0.01, 0.03), labels = function(i) { format(i, scientific = F) }, expand = c(0,0)) +
+  scale_x_continuous(limits = c(2.208,2.3), expand = c(0,0)) +
   scale_color_manual(values = magma(n = length(unique(LandUseDF$Cat_Name))),
                      limits = c("Urban","Cropland","Mosaic Vegetation/Cropland","Mosaic Vegetation",
                                 "Grassland","Shrubland","Lichens & Mosses","Sparse Vegetation",         

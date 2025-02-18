@@ -18,6 +18,8 @@ library(ggeffects)
 library(gmodels)
 library(spsUtil)
 library(brms)
+library(ggdist)
+library(mgcv)
 
 # Set random number seed
 set.seed(457034)
@@ -26,8 +28,7 @@ set.seed(457034)
 options(digits = 22)
 
 # Define file pathways
-ComplexPath <- '~/James/FinalisedFiles/'
-FilePath <- '~/James/Raw geodiversity data/'
+RastPath <- '~/Documents/Complexity Analyses/Final Data Products/'
 
 # Define sample size/and iteration number for resampling analyses
 N <- 1000
@@ -105,14 +106,14 @@ MCbrm <- function(Hbf, Rbf, Dbf, dat, n, measure) {
 ######################################
 
 # Load in the Complexity and Geodiversity Rasters
-DRast <- rast(paste0(ComplexPath, 'GlobalFractalDimension.tif'))
-RRast <- rast(paste0(ComplexPath, 'GlobalRugosity.tif'))
-HRast <- rast(paste0(ComplexPath, 'GlobalHeightRange.tif'))
-GRast <- rast(paste0(FilePath, 'Geodiversity_Mollweide_1870m.tif'))  
+DRast <- rast(paste0(RastPath, 'GlobalFractalDimension.tif'))
+RRast <- rast(paste0(RastPath, 'GlobalRugosity.tif'))
+HRast <- rast(paste0(RastPath, 'GlobalHeightRange.tif'))
+GRast <- rast(paste0(RastPath, 'Geodiversity_Mollweide_1870m.tif'))  
 # Load raster of Human Population size
-PopRast <- rast(paste0(FilePath, 'PopCount_Mollweide_1870m.tif'))
+PopRast <- rast(paste0(RastPath, 'PopCount_Mollweide_1870m.tif'))
 # and climate variability
-ClimRast <- rast(paste0(FilePath, 'ClimVar_Mollweide_1870m.tif'))
+ClimRast <- rast(paste0(RastPath, 'ClimVar_Mollweide_1870m.tif'))
 
 # Ensure resolutions and extents match across the geodiversity and geometric complexity rasters
 ext(GRast) <- ext(DRast)
@@ -139,19 +140,6 @@ D_I <- terra::autocor(DRast, w, method = 'moran', global = TRUE)
 R_I <- terra::autocor(RRast, w, method = 'moran', global = TRUE)  
 H_I <- terra::autocor(HRast, w, method = 'moran', global = TRUE) 
 
-# plot global maps (for possible use in figures)
-# Fractal Dimension
-plot(DRast, col = magma(100, direction = -1), 
-     buffer = FALSE,
-     plg = list(x = 'bottom', at = c(2,3), digits = 1, tic = 'none', size = c(1,2.5)),
-     box = FALSE, 
-     axes = FALSE)
-# Geodiversity
-plot(GRast, col = cividis(100, direction = -1), 
-     buffer = FALSE, 
-     plg = list(x = 'bottom', at = c(-12,0), tic = 'none', size = c(1,2.5)),
-     box = FALSE, 
-     axes = FALSE)
 
 # collate raster variables together in a single data frame
 # Extract GPS coordinates
@@ -235,48 +223,48 @@ tmpData <- RawData %>% select(D, R2, H2, G) %>% collect() %>% sample_n(size = Ns
 # Fractal Dimension
 (GDplot <- ggplot(tmpData, aes(x = G, y = D, fill = factor(G))) +
     stat_halfeye(adjust = 0.5, show.legend = FALSE, .width = 0, point_colour = NA) +
-    xlab('\nGeodiversity') +
-    ylab('Fractal Dimension\n') +
+    xlab(NULL) +
+    ylab(NULL) +
     coord_cartesian(ylim = c(2, 2.8)) + 
     scale_y_continuous(breaks = c(2.0,2.2,2.4,2.6,2.8), labels = c(2.0,2.2,2.4,2.6,2.8)) +
     scale_fill_manual(values = magma(n = 20)) +
     theme_bw() + theme(panel.grid.major = element_blank(),
                        panel.grid.minor = element_blank(),
                        axis.title = element_text(size = 15, colour = 'black'),
-                       axis.text.x = element_text(size = 15, colour = "black"), 
-                       axis.text.y = element_text(size = 15, colour = "black"),
+                       axis.text.x = element_text(size = 30, colour = "black"), 
+                       axis.text.y = element_text(size = 30, colour = "black"),
                        panel.border = element_blank()) +
     theme(axis.line = element_line(color = 'black')))
 
 # Rugosity
 (GRplot <- ggplot(tmpData, aes(x = G, y = R2, fill = factor(G))) +
     stat_halfeye(adjust = 0.5, show.legend = FALSE, .width = 0, point_colour = NA) +
-    xlab('\nGeodiversity') +
-    ylab('Rugosity\n') +
+    xlab(NULL) +
+    ylab(NULL) +
     scale_y_continuous(breaks = c(log10(1), log10(1e-05), log10(1e-10)), labels = function(i) 10^i) +
     coord_cartesian(ylim = c(-11, 2)) + 
     scale_fill_manual(values = magma(n = 20)) +
     theme_bw() + theme(panel.grid.major = element_blank(),
                        panel.grid.minor = element_blank(),
                        axis.title = element_text(size = 15, colour = 'black'),
-                       axis.text.x = element_text(size = 15, colour = "black"), 
-                       axis.text.y = element_text(size = 15, colour = "black"),
+                       axis.text.x = element_text(size = 30, colour = "black"), 
+                       axis.text.y = element_text(size = 30, colour = "black"),
                        panel.border = element_blank()) +
     theme(axis.line = element_line(color = 'black')))
 
 # Height Range
 (GHplot <- ggplot(tmpData, aes(x = G, y = H2, fill = factor(G))) +
     stat_halfeye(adjust = 0.5, show.legend = FALSE, .width = 0, point_colour = NA) +
-    xlab('\nGeodiversity') +
-    ylab('Height Range\n') +
+    xlab(NULL) +
+    ylab(NULL) +
     scale_y_continuous(breaks = c(log10(10), log10(1), log10(1e-02), log10(1e-4)), labels = function(i) 10^i) +
     coord_cartesian(ylim = c(-4.1, 1.6)) + 
     scale_fill_manual(values = magma(n = 20)) +
     theme_bw() + theme(panel.grid.major = element_blank(),
                        panel.grid.minor = element_blank(),
                        axis.title = element_text(size = 15, colour = 'black'),
-                       axis.text.x = element_text(size = 15, colour = "black"), 
-                       axis.text.y = element_text(size = 15, colour = "black"),
+                       axis.text.x = element_text(size = 30, colour = "black"), 
+                       axis.text.y = element_text(size = 30, colour = "black"),
                        panel.border = element_blank()) +
     theme(axis.line = element_line(color = 'black')))
 
@@ -322,7 +310,7 @@ Dbf <- bf(PD2 ~ D + s(Lat,Lon),
 
 # Run Bayesian approach with resampling used to evaluate the relationships between each complexity variable and population density
 PDlist <- pblapply(1:iter, function(i) { MCbrm(Hbf = Hbf, Rbf = Rbf, Dbf = Dbf, dat = RawData, n = N, measure = 'PD') })
-saveRDS(PDlist, file = paste0(FilePath, "PDlist.rds")) # checkpoint
+saveRDS(PDlist, file = paste0(RastPath, "PDlist.rds")) # checkpoint
 
 # Extract R squared statistics
 H_R <- quiet(ci(unlist(lapply(PDlist,'[[', 'H_R'))))
@@ -333,11 +321,11 @@ D_R <- quiet(ci(unlist(lapply(PDlist,'[[', 'D_R'))))
 coefR <- quiet(as.data.frame(t(apply(sapply(PDlist, '[[', 'R_hu'), 1, ci))))
 coefH <- quiet(as.data.frame(t(apply(sapply(PDlist, '[[', 'H_hu'), 1, ci))))
 coefD <- quiet(as.data.frame(t(apply(sapply(PDlist, '[[', 'D_hu'), 1, ci))))
-# Compute mean and variance bounds in each modeled relationship
+# Compute mean and variance bounds in each modeled relationship (transform to probability of >0 )
 Rvec <- seq(-13.7,0.8, 0.01); Dvec <- seq(2,3, 0.01); Hvec <- seq(-7,1.2, 0.01)
-R_hu <- data.frame(R = Rvec, Mean = exp(coefR[1,1]+coefR[2,1]*Rvec), Lower = exp(coefR[1,2]+coefR[2,2]*Rvec), Upper = exp(coefR[1,3]+coefR[2,3]*Rvec))
-D_hu <- data.frame(D = Dvec, Mean = exp(coefD[1,1]+coefD[2,1]*Dvec), Lower = exp(coefD[1,2]+coefD[2,2]*Dvec), Upper = exp(coefD[1,3]+coefD[2,3]*Dvec))
-H_hu <- data.frame(H = Hvec, Mean = exp(coefH[1,1]+coefH[2,1]*Hvec), Lower = exp(coefH[1,2]+coefH[2,2]*Hvec), Upper = exp(coefH[1,3]+coefH[2,3]*Hvec))
+R_hu <- data.frame(R = Rvec, Mean = 1-(exp(coefR[1,1]+coefR[2,1]*Rvec)), Lower = 1-(exp(coefR[1,2]+coefR[2,2]*Rvec)), Upper = 1-(exp(coefR[1,3]+coefR[2,3]*Rvec)))
+D_hu <- data.frame(D = Dvec, Mean = 1-(exp(coefD[1,1]+coefD[2,1]*Dvec)), Lower = 1-(exp(coefD[1,2]+coefD[2,2]*Dvec)), Upper = 1-(exp(coefD[1,3]+coefD[2,3]*Dvec)))
+H_hu <- data.frame(H = Hvec, Mean = 1-(exp(coefH[1,1]+coefH[2,1]*Hvec)), Lower = 1-(exp(coefH[1,2]+coefH[2,2]*Hvec)), Upper = 1-(exp(coefH[1,3]+coefH[2,3]*Hvec)))
 
 # Extract predicted relationships for plotting
 RPD <- quiet(as.data.frame(t(apply(sapply(PDlist, '[[', 'R'), 1, ci)))); RPD$R <- Rvec; names(RPD) <- c('PD','Lower','Upper','SE','R') # Rugosity
@@ -354,18 +342,18 @@ ggplot(data = RPD) +
   geom_line(aes(x = R, y = PD), col = '#000099', linewidth = 1.1) +
   geom_ribbon(aes(x = R, ymin = Lower*dR, ymax = Upper*dR), fill = '#F90707', alpha = 0.2, data = R_hu) +
   geom_line(aes(x = R, y = Mean*dR), col = '#A80000', linewidth = 1.1, data = R_hu) +
-  xlab('\nRugosity') +
+  xlab(NULL) +
   scale_x_continuous(expand = c(0,0), breaks = c(log10(1), log10(1e-05), log10(1e-10)), labels = function(i) 10^i) +
-  scale_y_continuous(name = 'Population Density\n',
+  scale_y_continuous(name = NULL,
                      labels = function(i) {format(i, digits = 2, scientific = FALSE)},
                      sec.axis = sec_axis(~./dR,
-                                         name = '\nProbability',
+                                         name = NULL,
                                          labels = function(i) round(i, 3))) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), 
-                     axis.text.y = element_text(size = 15, colour = "black"),
+                     axis.text.x = element_text(size = 30, colour = "black"), 
+                     axis.text.y = element_text(size = 30, colour = "black"),
                      panel.border = element_blank()) +
   theme(axis.line = element_line(color = 'black'))
 
@@ -377,18 +365,18 @@ ggplot(data = DPD) +
   geom_line(aes(x = D, y = Mean*dD), col = '#A80000', linewidth = 1.1, data = D_hu) +
   geom_ribbon(aes(x = D, ymin = Lower, ymax = Upper), fill = '#0000FF', alpha = 0.2) +
   geom_line(aes(x = D, y = PD), col = '#000099', linewidth = 1.1) +
-  xlab('\nFractal Dimension') +
-  scale_y_continuous(name = 'Population Density\n',
+  xlab(NULL) +
+  scale_y_continuous(name = NULL,
                      labels = function(i) {format(i, digits = 2, scientific = FALSE)},
                      sec.axis = sec_axis(~./dD,
-                                         name = '\nProbability',
+                                         name = NULL,
                                          labels = function(i) round(i, 3))) +
   scale_x_continuous(expand = c(0,0)) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), 
-                     axis.text.y = element_text(size = 15, colour = "black"),
+                     axis.text.x = element_text(size = 30, colour = "black"), 
+                     axis.text.y = element_text(size = 30, colour = "black"),
                      panel.border = element_blank()) +
   theme(axis.line = element_line(color = 'black'))
 
@@ -400,18 +388,18 @@ ggplot(data = HPD) +
   geom_line(aes(x = H, y = PD), col = '#000099', linewidth = 1.1) +
   geom_ribbon(aes(x = H, ymin = Lower*dH, ymax = Upper*dH), fill = '#F90707', alpha = 0.2, data = H_hu) +
   geom_line(aes(x = H, y = Mean*dH), col = '#A80000', linewidth = 1.1, data = H_hu) +
-  xlab('\nHeight Range') +
+  xlab(NULL) +
   scale_x_continuous(expand = c(0,0), breaks = c(log10(10), log10(1), log10(1e-02), log10(1e-4), log10(1e-6)), labels = function(i) 10^i) +
-  scale_y_continuous(name = 'Population Density\n',
+  scale_y_continuous(name = NULL,
                      labels = function(i) {format(i, digits = 2, scientific = FALSE)},
                      sec.axis = sec_axis(~./dH,
-                                         name = '\nProbability',
+                                         name = NULL,
                                          labels = function(i) round(i, 3))) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 15, colour = "black"), 
-                     axis.text.y = element_text(size = 15, colour = "black"),
+                     axis.text.x = element_text(size = 30, colour = "black"), 
+                     axis.text.y = element_text(size = 30, colour = "black"),
                      panel.border = element_blank()) +
   theme(axis.line = element_line(color = 'black'))
 
