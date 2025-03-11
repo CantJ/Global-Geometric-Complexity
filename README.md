@@ -17,6 +17,8 @@ For further information please do not hesitate to contact **James Cant** at *jam
 
 ***6. Estimating Global Climate Variability.R:*** Currently, the analyses presented within the script do not currently feature in the manuscript itself, but they comprise extracting climatlogy data from WorldClim for quantifying decadal patterns in mean monthtly standard deviation in temperature across the global. The output derived from this script is a global map of how the standardd deviation in monthly temperature variability changes across the globe.
 
-***7. Evaluating Complexity associations.R:*** Finally, this script centres around analyses exploring the association between each of the measures of geometric complexity (*height range, rugosity, and fractal dimension*) and (1) *geodiversity*, (2) *human population density*, and (3) *climate variability* [currently doesn't feature in the analysis]. 
+***7. Evaluating Complexity associations.R:*** This script centres around analyses exploring the association between each of the measures of geometric complexity (*height range, rugosity, and fractal dimension*) and (1) *geodiversity*, (2) *human population density*, and (3) *climate variability* [currently doesn't feature in the analysis]. 
+
+***8. Island Complexity Analysis.R:*** Finally, this script centres around analyses evaluating the extent to which including the geometric complexity measures of height range, rugosity, and fractal dimension adds value to assessments of island-species area relationships, and how this approach can help to reveal key mechanistic drivers of global biodiversity patterns. 
 
 ### Enjoy!!
