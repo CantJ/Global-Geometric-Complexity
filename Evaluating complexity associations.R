@@ -28,7 +28,7 @@ set.seed(457034)
 options(digits = 22)
 
 # Define file pathways
-RastPath <- '~/Documents/Complexity Analyses/Final Data Products/'
+RastPath <- '/FILE_DIRECTORY_1/'
 
 # Define sample size/and iteration number for resampling analyses
 N <- 1000
@@ -139,7 +139,6 @@ w <- matrix(c(1,1,1,1,0,1,1,1,1), nrow = 3)
 D_I <- terra::autocor(DRast, w, method = 'moran', global = TRUE)
 R_I <- terra::autocor(RRast, w, method = 'moran', global = TRUE)  
 H_I <- terra::autocor(HRast, w, method = 'moran', global = TRUE) 
-
 
 # collate raster variables together in a single data frame
 # Extract GPS coordinates
@@ -269,7 +268,6 @@ tmpData <- RawData %>% select(D, R2, H2, G) %>% collect() %>% sample_n(size = Ns
     theme(axis.line = element_line(color = 'black')))
 
 # Quantify relationships
-
 # Run Generalized Additive Models on full data set using resampling to evaluate the relationships between each complexity variable and geodiversity
 GAMlist <- pblapply(1:iter, function(i) { mc_GAM(dat = RawData, n = N) })
 

@@ -325,8 +325,8 @@ IslandData$SpRich <- log10(IslandData$Extant.natives)
 # Functional Richness
 hist(IslandData$FRich)
 hist(log10(IslandData$FRich)) 
-transformTukey(IslandData$FRich, plotit = F)
-hist(IslandData$FRich^0.275) # power transformation is appropriate
+transformTukey(IslandData$FRich, plotit = FALSE)
+hist(IslandData$FRich^0.275)
 IslandData$FRich2 <- IslandData$FRich^0.275
 
 # Island human population index
@@ -337,7 +337,7 @@ IslandData$HPI <- log10(IslandData$HPI+1)
 # Island Isolation
 hist(IslandData$Isolation)
 hist(log10(IslandData$Isolation))
-transformTukey(IslandData$Isolation, plotit = F)
+transformTukey(IslandData$Isolation, plotit = FALSE)
 hist(IslandData$Isolation^0.5)
 IslandData$Isolation <- IslandData$Isolation^0.5
 
@@ -355,15 +355,6 @@ hist(IslandData$R)
 # Height Range
 hist(IslandData$H) # No transformations needed for complexity variables.
 
-# Add variables for implementing the choros (K) species richness model (K = H * A)
-IslandData$AD <- IslandData$AreaKM2*IslandData$D
-IslandData$AR <- IslandData$AreaKM2*IslandData$R 
-IslandData$AH <- IslandData$AreaKM2*IslandData$H 
-# and check their distributions
-hist(IslandData$AH)
-hist(IslandData$AR)
-hist(IslandData$AD)
-
 
 ######################################
 # STEP 2: Run Analyses
@@ -371,32 +362,30 @@ hist(IslandData$AD)
 
 ## -----------------------------------------------------------
 ##### Biodiversity and complexity
-# Implement choros models (R ~ A*H).
-# Choros models work by assessing how changes in the dimensional space impact upon changes in species and functional richness.
-
+# Implement species-area+complexity models (S ~ A+H).
 #### Species Richness
 # baseline model
 SpMod <- brm(formula = SpRich ~ AreaKM2 + absLat + Isolation + HPI, # accounting for island isolation, latitude, and associated human population
               data = IslandData,
               family = 'gaussian',
               iter = 3000, chains = 4, seed = 1200)
-SpModR <- brm(formula = SpRich ~ AR + absLat + Isolation + HPI, 
+SpModR <- brm(formula = SpRich ~ AreaKM2 + R + absLat + Isolation + HPI, 
               data = IslandData,
               family = 'gaussian',
               iter = 3000, chains = 4, seed = 15999)
-SpModD <- brm(formula = SpRich ~ AD + absLat + Isolation + HPI,
+SpModD <- brm(formula = SpRich ~ AreaKM2 + D + absLat + Isolation + HPI,
               data = IslandData,
               family = 'gaussian',
-              iter = 3000, chains = 4, seed = 1212)
-SpModH <- brm(formula = SpRich ~ AH + absLat + Isolation + HPI, 
+              iter = 3000, chains = 4, seed = 8765)
+SpModH <- brm(formula = SpRich ~ AreaKM2 + H + absLat + Isolation + HPI, 
               data = IslandData,
               family = 'gaussian',
               iter = 3000, chains = 4, seed = 1256)
 # Model fits
-fixef(SpMod); bayes_R2(SpMod)
-fixef(SpModH); bayes_R2(SpModH)
-fixef(SpModR); bayes_R2(SpModR)
-fixef(SpModD); bayes_R2(SpModD)
+bayes_R2(SpMod)
+bayes_R2(SpModH)
+bayes_R2(SpModR)
+bayes_R2(SpModD)
 
 #### Functional Richness
 # baseline model
@@ -404,94 +393,184 @@ FMod <- brm(formula = FRich2 ~ AreaKM2 + absLat + Isolation + HPI, # accounting 
             data = IslandData,
             family = 'gaussian',
             iter = 3000, chains = 4, seed = 4333)
-FModR <- brm(formula = FRich2 ~ AR + absLat + Isolation + HPI, 
+FModR <- brm(formula = FRich2 ~ AreaKM2 + R + absLat + Isolation + HPI, 
              data = IslandData,
              family = 'gaussian',
              iter = 3000, chains = 4, seed = 2167)
-FModD <- brm(formula = FRich2 ~ AD + absLat + Isolation + HPI,
+FModD <- brm(formula = FRich2 ~ AreaKM2 + D + absLat + Isolation + HPI,
              data = IslandData,
              family = 'gaussian',
              iter = 3000, chains = 4, seed = 3412)
-FModH <- brm(formula = FRich2 ~ AH + absLat + Isolation + HPI, 
+FModH <- brm(formula = FRich2 ~ AreaKM2 + H + absLat + Isolation + HPI, 
              data = IslandData,
              family = 'gaussian',
              iter = 3000, chains = 4, seed = 4987)
 # Model fits
-fixef(FMod); bayes_R2(FMod)
-fixef(FModH); bayes_R2(FModH)
-fixef(FModR); bayes_R2(FModR)
-fixef(FModD); bayes_R2(FModD)
+bayes_R2(FMod)
+bayes_R2(FModH)
+bayes_R2(FModR)
+bayes_R2(FModD)
 
-# Condense necessary details into data frames for plotting
-# Extract posterior coefficients from each complexity scenario
-SpRichDF <- do.call(rbind, list(SpMod %>% spread_draws(b_AreaKM2) %>% mutate(Focus = 'z', Metric = 'Area') %>% rename(coefficient = b_AreaKM2),
-                                SpModR %>% spread_draws(b_AR) %>% mutate(Focus = 'z', Metric = 'Rugosity') %>% rename(coefficient = b_AR),
-                                SpModD %>% spread_draws(b_AD) %>% mutate(Focus = 'z', Metric = 'Fractal Dimension') %>% rename(coefficient = b_AD),
-                                SpModH %>% spread_draws(b_AH) %>% mutate(Focus = 'z', Metric = 'Height Range') %>% rename(coefficient = b_AH),
-                                SpMod %>% spread_draws(b_Intercept) %>% mutate(Focus = 'log(C)', Metric = 'Area') %>% rename(coefficient = b_Intercept),
-                                SpModR %>% spread_draws(b_Intercept) %>% mutate(Focus = 'log(C)', Metric = 'Rugosity') %>% rename(coefficient = b_Intercept),
-                                SpModD %>% spread_draws(b_Intercept) %>% mutate(Focus = 'log(C)', Metric = 'Fractal Dimension') %>% rename(coefficient = b_Intercept),
-                                SpModH %>% spread_draws(b_Intercept) %>% mutate(Focus = 'log(C)', Metric = 'Height Range') %>% rename(coefficient = b_Intercept)))
-FRichDF <- do.call(rbind, list(FMod %>% spread_draws(b_AreaKM2) %>% mutate(Focus = 'z', Metric = 'Area') %>% rename(coefficient = b_AreaKM2),
-                               FModR %>% spread_draws(b_AR) %>% mutate(Focus = 'z', Metric = 'Rugosity') %>% rename(coefficient = b_AR),
-                               FModD %>% spread_draws(b_AD) %>% mutate(Focus = 'z', Metric = 'Fractal Dimension') %>% rename(coefficient = b_AD),
-                               FModH %>% spread_draws(b_AH) %>% mutate(Focus = 'z', Metric = 'Height Range') %>% rename(coefficient = b_AH),
-                               FMod %>% spread_draws(b_Intercept) %>% mutate(Focus = 'log(C)', Metric = 'Area') %>% rename(coefficient = b_Intercept),
-                               FModR %>% spread_draws(b_Intercept) %>% mutate(Focus = 'log(C)', Metric = 'Rugosity') %>% rename(coefficient = b_Intercept),
-                               FModD %>% spread_draws(b_Intercept) %>% mutate(Focus = 'log(C)', Metric = 'Fractal Dimension') %>% rename(coefficient = b_Intercept),
-                               FModH %>% spread_draws(b_Intercept) %>% mutate(Focus = 'log(C)', Metric = 'Height Range') %>% rename(coefficient = b_Intercept)))
-
-# Reformat variable classes
-SpRichDF$Focus <- as.factor(SpRichDF$Focus)
-SpRichDF$Metric <- as.factor(SpRichDF$Metric)
-SpRichDF <- SpRichDF %>% mutate(Focus = fct_relevel(Focus, 'z', 'log(C)'))
-SpRichDF <- SpRichDF %>% mutate(Metric = fct_relevel(Metric, 'Area', 'Fractal Dimension', 'Rugosity', 'Height Range'))
-FRichDF$Focus <- as.factor(FRichDF$Focus)
-FRichDF$Metric <- as.factor(FRichDF$Metric)
-FRichDF <- FRichDF %>% mutate(Focus = fct_relevel(Focus, 'z', 'log(C)'))
-FRichDF <- FRichDF %>% mutate(Metric = fct_relevel(Metric, 'Area','Fractal Dimension','Rugosity', 'Height Range'))
-
-# Plot posterior coefficients
+# Extract z (slope) and intercept coefficients
 # Species Richness
-ggplot(aes(y = Metric, x = coefficient, fill = Metric), data = SpRichDF) +
-  stat_halfeye(adjust = 0.5, show.legend = FALSE, alpha = 0.9) +
-  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1) +
-  facet_wrap(~Focus, scales = 'free_x') +
-  scale_fill_manual(values = fish(n = 4, option = 'Ostracion_whitleyi', direction = -1)) +
-  ylab(NULL) +
-  xlab(NULL) +
-  theme_bw() + theme(panel.grid.major = element_blank(),
-                     panel.grid.minor = element_blank(),
-                     axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 30, colour = "black"), 
-                     axis.text.y = element_text(size = 15, colour = "black"),
-                     strip.text.x = element_text(size = 20),
-                     panel.border = element_rect(linewidth = 1.5),
-                     axis.line = element_line(color = 'black')) +
-  ggh4x::facetted_pos_scales(x = list(
-    Focus == 'z' ~ scale_x_continuous(limits = c(-0.2, 0.2), breaks = c(-0.2, -0.1, 0, 0.1, 0.2), labels = c(-0.2, -0.1, 0, 0.1, 0.2)),
-    Focus == 'log(C)' ~ scale_x_continuous(limits = c(0.76, 1.06), breaks = c(0.8, 0.9, 1), labels = c(0.8, 0.9, 1))
-  )) 
-
+fixef(SpMod)[c('Intercept', 'AreaKM2'),] 
+fixef(SpModR)['Intercept',]; colSums(fixef(SpModR)[c('AreaKM2', 'R'),]) 
+fixef(SpModD)['Intercept',]; colSums(fixef(SpModD)[c('AreaKM2', 'D'),]) 
+fixef(SpModH)['Intercept',]; colSums(fixef(SpModH)[c('AreaKM2', 'H'),]) 
 # Functional Richness
-ggplot(aes(y = Metric, x = coefficient, fill = Metric), data = FRichDF) +
-  stat_halfeye(adjust = 0.5, show.legend = FALSE, alpha = 0.9) +
-  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1) +
-  facet_wrap(~Focus, scales = 'free_x') +
-  scale_fill_manual(values = fish(n = 4, option = 'Ostracion_whitleyi', direction = -1)) +
-  ylab(NULL) +
+fixef(FMod)[c('Intercept', 'AreaKM2'),] 
+fixef(FModR)['Intercept',]; colSums(fixef(FModR)[c('AreaKM2', 'R'),]) 
+fixef(FModD)['Intercept',]; colSums(fixef(FModD)[c('AreaKM2', 'D'),]) 
+fixef(FModH)['Intercept',]; colSums(fixef(FModH)[c('AreaKM2', 'H'),])
+
+# Visualise affects of complexity on species and functional richness
+SpA <- conditional_effects(SpMod)[[1]][,c('effect1__', 'estimate__', 'lower__', 'upper__')]; names(SpA) <- c('Area', 'mean', 'lower', 'upper')
+SpR <- conditional_effects(SpModR)[[2]][,c('effect1__', 'estimate__', 'lower__', 'upper__')]; names(SpR) <- c('R', 'mean', 'lower', 'upper')
+SpD <- conditional_effects(SpModD)[[2]][,c('effect1__', 'estimate__', 'lower__', 'upper__')]; names(SpD) <- c('D', 'mean', 'lower', 'upper')
+SpH <- conditional_effects(SpModH)[[2]][,c('effect1__', 'estimate__', 'lower__', 'upper__')]; names(SpH) <- c('H', 'mean', 'lower', 'upper')
+FA <- conditional_effects(FMod)[[1]][,c('effect1__', 'estimate__', 'lower__', 'upper__')]; names(FA) <- c('Area', 'mean', 'lower', 'upper')
+FR <- conditional_effects(FModR)[[2]][,c('effect1__', 'estimate__', 'lower__', 'upper__')]; names(FR) <- c('R', 'mean', 'lower', 'upper')
+FD <- conditional_effects(FModD)[[2]][,c('effect1__', 'estimate__', 'lower__', 'upper__')]; names(FD) <- c('D', 'mean', 'lower', 'upper')
+FH <- conditional_effects(FModH)[[2]][,c('effect1__', 'estimate__', 'lower__', 'upper__')]; names(FH) <- c('H', 'mean', 'lower', 'upper')
+
+#### Species Richness versus 
+# Area
+ggplot() +
+  geom_ribbon(aes(x = Area, ymin = lower, ymax = upper), data = SpA, alpha = 0.4, fill = '#62AFD7FF') +
+  geom_point(aes(x = AreaKM2, y = SpRich), data = IslandData, size = 5, col = '#305395FF') + 
+  geom_line(aes(x = Area, y = mean), data = SpA, linetype = 'solid', linewidth = 4, col = '#191819FF') +
+  scale_x_continuous(breaks = c(-2, 0, 2, 4, 6), labels = function(i) format(exp(i), digits = 2)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1, 1.5, 2), labels = function(i) format(exp(i), digits = 2)) +
   xlab(NULL) +
+  ylab(NULL) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
-                     axis.title = element_text(size = 15, colour = 'black'),
                      axis.text.x = element_text(size = 30, colour = "black"), 
-                     axis.text.y = element_text(size = 15, colour = "black"),
-                     strip.text.x = element_text(size = 20),
+                     axis.text.y = element_text(size = 30, colour = "black"),
                      panel.border = element_rect(linewidth = 1.5),
-                     axis.line = element_line(color = 'black')) +
-  ggh4x::facetted_pos_scales(x = list(
-    Focus == 'z' ~ scale_x_continuous(limits = c(-0.07, 0.05), breaks = c(-0.06, -0.01, 0.04), labels = c(-0.06, -0.01, 0.04)),
-    Focus == 'log(C)' ~ scale_x_continuous(limits = c(0.11, 0.23), breaks = c(0.12, 0.17, 0.22), labels = c(0.12, 0.17, 0.22))
-  )) 
+                     plot.margin = margin(10, 15, 10, 10),
+                     legend.position = 'none',
+                     axis.line = element_line(color = 'black'))
+# Rugosity
+ggplot() +
+  geom_ribbon(aes(x = R, ymin = lower, ymax = upper), data = SpR, alpha = 0.4, fill = '#62AFD7FF') +
+  geom_point(aes(x = R, y = SpRich), data = IslandData, size = 5, col = '#305395FF') + 
+  geom_line(aes(x = R, y = mean), data = SpR, linetype = 'solid', linewidth = 4, col = '#191819FF') +
+  scale_x_continuous(breaks = c(-5, -4, -3, -2, -1, 0), labels = function(i) format(exp(i), digits = 1)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1, 1.5, 2), labels = function(i) format(exp(i), digits = 2)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     axis.text.x = element_text(size = 30, colour = "black"), 
+                     axis.text.y = element_text(size = 30, colour = "black"),
+                     panel.border = element_rect(linewidth = 1.5),
+                     plot.margin = margin(10, 15, 10, 10),
+                     legend.position = 'none',
+                     axis.line = element_line(color = 'black'))
+# Height Range
+ggplot() +
+  geom_ribbon(aes(x = H, ymin = lower, ymax = upper), data = SpH, alpha = 0.4, fill = '#62AFD7FF') +
+  geom_point(aes(x = H, y = SpRich), data = IslandData, size = 5, col = '#305395FF') + 
+  geom_line(aes(x = H, y = mean), data = SpH, linetype = 'solid', linewidth = 4, col = '#191819FF') +
+  scale_x_continuous(breaks = c(-1.8, -1.2, -0.6, -0, 0.6), labels = function(i) format(exp(i), digits = 2)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1, 1.5, 2), labels = function(i) format(exp(i), digits = 2)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     axis.text.x = element_text(size = 30, colour = "black"), 
+                     axis.text.y = element_text(size = 30, colour = "black"),
+                     panel.border = element_rect(linewidth = 1.5),
+                     plot.margin = margin(10, 15, 10, 10),
+                     legend.position = 'none',
+                     axis.line = element_line(color = 'black'))
+# Fractal Dimension
+ggplot() +
+  geom_ribbon(aes(x = D, ymin = lower, ymax = upper), data = SpD, alpha = 0.4, fill = '#62AFD7FF') +
+  geom_point(aes(x = D, y = SpRich), data = IslandData, size = 5, col = '#305395FF') + 
+  geom_line(aes(x = D, y = mean), data = SpD, linetype = 'solid', linewidth = 4, col = '#191819FF') +
+  scale_x_continuous(breaks = c(2, 2.25, 2.5), labels = function(i) format(i, digits = 3)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1, 1.5, 2), labels = function(i) format(exp(i), digits = 2)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     axis.text.x = element_text(size = 30, colour = "black"), 
+                     axis.text.y = element_text(size = 30, colour = "black"),
+                     panel.border = element_rect(linewidth = 1.5),
+                     plot.margin = margin(10, 15, 10, 10),
+                     legend.position = 'none',
+                     axis.line = element_line(color = 'black'))
+
+# Functional Richness versus
+# Area
+ggplot() +
+  geom_ribbon(aes(x = Area, ymin = lower, ymax = upper), data = FA, alpha = 0.7, fill = '#A2BAC5FF') +
+  geom_point(aes(x = AreaKM2, y = FRich2), data = IslandData, size = 5, col = '#992216FF') + 
+  geom_line(aes(x = Area, y = mean), data = FA, linetype = 'solid', linewidth = 4, col = '#490D07FF') +
+  scale_x_continuous(breaks = c(-2, 0, 2, 4, 6), labels = function(i) format(exp(i), digits = 2)) +
+  scale_y_continuous(breaks = c(0,0.1, 0.2, 0.3, 0.4), labels = function(i) format(i^(1/0.275), digits = 2)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     axis.text.x = element_text(size = 30, colour = "black"), 
+                     axis.text.y = element_text(size = 30, colour = "black"),
+                     panel.border = element_rect(linewidth = 1.5),
+                     plot.margin = margin(10, 15, 10, 10),
+                     legend.position = 'none',
+                     axis.line = element_line(color = 'black'))
+# Rugosity
+ggplot() +
+  geom_ribbon(aes(x = R, ymin = lower, ymax = upper), data = FR, alpha = 0.7, fill = '#A2BAC5FF') +
+  geom_point(aes(x = R, y = FRich2), data = IslandData, size = 5, col = '#992216FF') + 
+  geom_line(aes(x = R, y = mean), data = FR, linetype = 'solid', linewidth = 4, col = '#490D07FF') +
+  scale_x_continuous(breaks = c(-5, -4, -3, -2, -1, 0), labels = function(i) format(exp(i), digits = 1)) +
+  scale_y_continuous(breaks = c(0,0.1, 0.2, 0.3, 0.4), labels = function(i) format(i^(1/0.275), digits = 2)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     axis.text.x = element_text(size = 30, colour = "black"), 
+                     axis.text.y = element_text(size = 30, colour = "black"),
+                     panel.border = element_rect(linewidth = 1.5),
+                     plot.margin = margin(10, 15, 10, 10),
+                     legend.position = 'none',
+                     axis.line = element_line(color = 'black'))
+# Height Range
+ggplot() +
+  geom_ribbon(aes(x = H, ymin = lower, ymax = upper), data = FH, alpha = 0.7, fill = '#A2BAC5FF') +
+  geom_point(aes(x = H, y = FRich2), data = IslandData, size = 5, col = '#992216FF') + 
+  geom_line(aes(x = H, y = mean), data = FH, linetype = 'solid', linewidth = 4, col = '#490D07FF') +
+  scale_x_continuous(breaks = c(-1.8, -1.2, -0.6, -0, 0.6), labels = function(i) format(exp(i), digits = 2)) +
+  scale_y_continuous(breaks = c(0,0.1, 0.2, 0.3, 0.4), labels = function(i) format(i^(1/0.275), digits = 2)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     axis.text.x = element_text(size = 30, colour = "black"), 
+                     axis.text.y = element_text(size = 30, colour = "black"),
+                     panel.border = element_rect(linewidth = 1.5),
+                     plot.margin = margin(10, 15, 10, 10),
+                     legend.position = 'none',
+                     axis.line = element_line(color = 'black'))
+# Fractal Dimension
+ggplot() +
+  geom_ribbon(aes(x = D, ymin = lower, ymax = upper), data = FD, alpha = 0.7, fill = '#A2BAC5FF') +
+  geom_point(aes(x = D, y = FRich2), data = IslandData, size = 5, col = '#992216FF') + 
+  geom_line(aes(x = D, y = mean), data = FD, linetype = 'solid', linewidth = 4, col = '#490D07FF') +
+  scale_x_continuous(breaks = c(2, 2.25, 2.5), labels = function(i) format(i, digits = 3)) +
+  scale_y_continuous(breaks = c(0,0.1, 0.2, 0.3, 0.4), labels = function(i) format(i^(1/0.275), digits = 2)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     axis.text.x = element_text(size = 30, colour = "black"), 
+                     axis.text.y = element_text(size = 30, colour = "black"),
+                     panel.border = element_rect(linewidth = 1.5),
+                     plot.margin = margin(10, 15, 10, 10),
+                     legend.position = 'none',
+                     axis.line = element_line(color = 'black'))
 
 ##### ------------------------------------------------- End of Code ----------------------------------
