@@ -249,6 +249,7 @@ Location4 <- EcoTypesDF[which(EcoTypesDF$Realm == 'T' & EcoTypesDF$Biome == 6 & 
 Location5 <- EcoTypesDF[EcoTypesDF$Dmean == max(EcoTypesDF$Dmean),] # Coastal River Deltas
 Location6 <- EcoTypesDF[which(EcoTypesDF$Realm == 'F' & EcoTypesDF$Biome == 2 & EcoTypesDF$EFG == 6),] # Permanent salt lakes
 Location7 <- EcoTypesDF[which(EcoTypesDF$Realm == 'TF' & EcoTypesDF$Biome == 1 & EcoTypesDF$EFG == 3),] # Permanent marshland
+Location8 <- EcoTypesDF[which(EcoTypesDF$Realm == 'T' & EcoTypesDF$Biome == 5 & EcoTypesDF$EFG == 3),] # Sclerophyll hot deserts and semi-deserts
 
 # Reformat variables to aid visualization clarity
 EcoTypesDF$Realm_2 <- factor(EcoTypesDF$Realm_2,
@@ -270,10 +271,12 @@ ggplot(EcoTypesDF, aes(x=Dmean, y=Rmean)) +
                data = Location4, color = "#5F9258FF", linewidth = 2, alpha = 0.7, linetype = 'dashed') + # Polar Tundra
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.34, yend = 0.0005), 
                data = Location5, color = "#CBBA69FF", linewidth = 2, alpha = 0.7, linetype = 'dashed') + # Coastal River Deltas
-  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.16, yend = 0.0003), 
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.14, yend = 0.0003), 
                data = Location6, color = "lightblue", linewidth = 2, alpha = 0.9, linetype = 'dashed') + # Permanent Salt Lakes
   geom_segment(aes(x = Dmean, y = Rmean, xend = 2.34, yend = 0.00018), 
                data = Location7, color = "#FDE725FF", linewidth = 2, alpha = 0.9, linetype = 'dashed') + # Permanent Marsh
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.2, yend = 0.0005), 
+               data = Location8, color = "#5F9258FF", linewidth = 2, alpha = 0.7, linetype = 'dashed') + # Sclerophyll hot deserts and semi-deserts
   geom_point(aes(color = Realm_2), size = 9) +
   xlab(NULL) + # Fractal Dimension
   ylab(NULL) + # Rugosity
