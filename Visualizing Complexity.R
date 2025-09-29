@@ -428,6 +428,7 @@ ggplot(ET_R_dat) +
   ylab(NULL) +
   theme_ridges() +
   theme(axis.text.x = element_text(size = 20, colour = "black"), 
+        axis.text.y = element_text(size = 20, colour = "black"),
         panel.border = element_rect(linewidth = 1.5),
         axis.ticks = element_line(linewidth = 0.9),
         legend.position = 'none',
@@ -444,6 +445,7 @@ ggplot(ET_D_dat) +
   ylab(NULL) +
   theme_ridges() +
   theme(axis.text.x = element_text(size = 20, colour = "black"), 
+        axis.text.y = element_text(size = 20, colour = "black"),
         panel.border = element_rect(linewidth = 1.5),
         axis.ticks = element_line(linewidth = 0.9),
         legend.position = 'none',
@@ -460,7 +462,8 @@ ggplot(ET_R_dat) +
   xlab(NULL) +
   ylab(NULL) +
   theme_ridges() +
-  theme(axis.text.x = element_text(size = 20, colour = "black"), 
+  theme(axis.text.x = element_text(size = 20, colour = "black"),
+        axis.text.y = element_text(size = 20, colour = "black"),
         panel.border = element_rect(linewidth = 1.5),
         axis.ticks = element_line(linewidth = 0.9),
         legend.position = 'none',
@@ -476,7 +479,8 @@ ggplot(ET_D_dat) +
   xlab(NULL) +
   ylab(NULL) +
   theme_ridges() +
-  theme(axis.text.x = element_text(size = 20, colour = "black"), 
+  theme(axis.text.x = element_text(size = 20, colour = "black"),
+        axis.text.y = element_text(size = 20, colour = "black"),
         panel.border = element_rect(linewidth = 1.5),
         axis.ticks = element_line(linewidth = 0.9),
         legend.position = 'none',
@@ -528,8 +532,8 @@ Cropland2 <- LandUseDF[LandUseDF$Cat_Name == 'Mosaic Vegetation/Cropland',]
 
 # Create mean complexity plot
 ggplot(LandUseDF, aes(x = Dmean, y = log10(Rmean))) +
-  annotate('rect', xmin = 2.255, xmax = 2.302, ymin = -2.125, ymax = -1.5, fill = 'grey', alpha = 0.5) +
-  annotate('rect', xmin = 2.208, xmax = 2.255, ymin = -2.75, ymax = -2.125, fill = 'grey', alpha = 0.5) +
+  annotate('rect', xmin = 2.255, xmax = 2.302, ymin = -2.125, ymax = -1.5, fill = 'grey', alpha = 0.4) +
+  annotate('rect', xmin = 2.208, xmax = 2.255, ymin = -2.75, ymax = -2.125, fill = 'grey', alpha = 0.2) +
   geom_hline(aes(yintercept = -2.125), linetype = "dashed", col = 'black', linewidth = 1.5) +
   geom_vline(aes(xintercept = 2.255), linetype = "dashed", col = 'black', linewidth = 1.5) +
   geom_segment(aes(x = Dmean, y = log10(Rmean), xend = 2.235, yend = -2.65), 
@@ -607,7 +611,7 @@ ggplot(LU_R_dat) +
   ylab(NULL) +
   theme_ridges() +
   theme(axis.text.x = element_text(size = 20, colour = "black"), 
-        axis.text.y = element_blank(),
+        axis.text.y = element_text(size = 20, colour = "black"), 
         panel.border = element_rect(linewidth = 1.5),
         axis.ticks = element_line(linewidth = 0.9),
         legend.position = 'none',
@@ -631,7 +635,7 @@ ggplot(LU_D_dat) +
   ylab(NULL) +
   theme_ridges() +
   theme(axis.text.x = element_text(size = 20, colour = "black"), 
-        axis.text.y = element_blank(),
+        axis.text.y = element_text(size = 20, colour = "black"), 
         panel.border = element_rect(linewidth = 1.5),
         axis.ticks = element_line(linewidth = 0.9),
         legend.position = 'none',
@@ -658,11 +662,11 @@ ModEffects <- conditional_effects(EcoTypesMod2)[[1]][,c('Dmean', 'estimate__','l
 
 # Recreate mean complexity plot
 ggplot() +
-  annotate('rect', xmin = 2.225, xmax = 2.34, ymin = log10(0.006), ymax = -0.5, fill = 'grey', alpha = 0.5) +
-  annotate('rect', xmin = 2.11, xmax = 2.225, ymin = -4.15, ymax = log10(0.006), fill = 'grey', alpha = 0.5) +
+  annotate('rect', xmin = 2.225, xmax = 2.34, ymin = log10(0.006), ymax = -0.5, fill = 'grey', alpha = 0.4) +
+  annotate('rect', xmin = 2.11, xmax = 2.225, ymin = -4.15, ymax = log10(0.006), fill = 'grey', alpha = 0.2) +
   geom_hline(aes(yintercept = log10(0.006)), linetype = "dashed", col = 'black', linewidth = 1.5) +
   geom_vline(aes(xintercept = 2.225), linetype = "dashed", col = 'black', linewidth = 1.5) +
-  geom_ribbon(aes(x = Dmean, ymin = lower, ymax = upper), data = ModEffects, fill = 'black', alpha = 0.4) +
+  geom_ribbon(aes(x = Dmean, ymin = lower, ymax = upper), data = ModEffects, fill = 'black', alpha = 0.2) +
   geom_segment(aes(x = Dmean, y = log10(Rmean), xend = 2.12, yend = log10(0.05)), 
                data = Location1, color = "#00204DFF", linewidth = 2, alpha = 0.5, linetype = 'solid') + # Seamounts
   geom_segment(aes(x = Dmean, y = log10(Rmean), xend = 2.3, yend = log10(0.00015)), 
