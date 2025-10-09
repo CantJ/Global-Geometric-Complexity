@@ -430,20 +430,18 @@ bayes_R2(FModG)
 SpDat <- data.frame(A = spread_draws(SpMod, b_polyAreaKM221)[4],
                     R = spread_draws(SpModR, b_polyR21)[4],
                     H = spread_draws(SpModH, b_polyH21)[4],
-                    D = spread_draws(SpModD, b_polyD21)[4],
-                    G = spread_draws(SpModG, b_polyG21)[4])
-names(SpDat) <- c('A', 'R', 'H', 'D', 'G')
+                    D = spread_draws(SpModD, b_polyD21)[4])
+names(SpDat) <- c('A', 'R', 'H', 'D')
 SpDat <- melt(SpDat, variable.name = 'Metric', value.name = 'Slope')
-SpDat$Metric <- factor(SpDat$Metric, levels = c('D', 'G', 'H', 'R', 'A'))
+SpDat$Metric <- factor(SpDat$Metric, levels = c('D', 'H', 'R', 'A'))
 # Functional Richness
 FRDat <- data.frame(A = spread_draws(FMod, b_polyAreaKM221)[4],
                     R = spread_draws(FModR, b_polyR21)[4],
                     H = spread_draws(FModH, b_polyH21)[4],
-                    D = spread_draws(FModD, b_polyD21)[4],
-                    G = spread_draws(FModG, b_polyG21)[4])
-names(FRDat) <- c('A', 'R', 'H', 'D', 'G')
+                    D = spread_draws(FModD, b_polyD21)[4])
+names(FRDat) <- c('A', 'R', 'H', 'D')
 FRDat <- melt(FRDat, variable.name = 'Metric', value.name = 'Slope')
-FRDat$Metric <- factor(FRDat$Metric, levels = c('D', 'G', 'H', 'R', 'A'))
+FRDat$Metric <- factor(FRDat$Metric, levels = c('D', 'H', 'R', 'A'))
 
 # Plot posterior coefficients for the first polynomial
 # Species Richness
@@ -452,7 +450,7 @@ ggplot(SpDat, aes(y = Metric, x = Slope, fill = Metric)) +
   geom_vline(aes(xintercept = 0), linetype = 'dashed', linewidth = 1) +
   xlab(NULL) +
   ylab(NULL) +
-  scale_fill_manual(values = fish(n = 5, option = 'Acanthurus_olivaceus', direction = -1)) +
+  scale_fill_manual(values = c('#73D8FEFF','#1D373AFF','#3E938BFF','#FDC718FF')) + #fish(n = 5, option = 'Acanthurus_olivaceus', direction = -1)
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      axis.text.x = element_text(size = 30, colour = "black"), 
@@ -467,7 +465,7 @@ ggplot(FRDat, aes(y = Metric, x = Slope, fill = Metric)) +
   geom_vline(aes(xintercept = 0), linetype = 'dashed', linewidth = 1) +
   xlab(NULL) +
   ylab(NULL) +
-  scale_fill_manual(values = fish(n = 5, option = 'Acanthurus_olivaceus', direction = -1)) +
+  scale_fill_manual(values = c('#73D8FEFF','#1D373AFF','#3E938BFF','#FDC718FF')) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      axis.text.x = element_text(size = 30, colour = "black"), 
