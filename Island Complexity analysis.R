@@ -372,19 +372,19 @@ SpMod <- brm(formula = SpRich ~ poly(AreaKM2, 2) + (AreaKM2|Archipelago) + absLa
              data = IslandData,                                                                     # and the random effect of Archipelago.
              family = 'gaussian',
              iter = 3000, chains = 4, seed = 1200)
-SpModR <- brm(formula = SpRich ~ poly(R, 2) + (R|Archipelago) + absLat + Isolation + HPI, 
+SpModR <- brm(formula = SpRich ~ poly(R, 2) + (R|Archipelago) + AreaKM2 + absLat + Isolation + HPI, # accounting for the confounding effects of island area.
               data = IslandData,
               family = 'gaussian',
               iter = 3000, chains = 4, seed = 15999)
-SpModD <- brm(formula = SpRich ~ poly(D, 2) + (D|Archipelago) + absLat + Isolation + HPI,
+SpModD <- brm(formula = SpRich ~ poly(D, 2) + (D|Archipelago) + AreaKM2 + absLat + Isolation + HPI,
               data = IslandData,
               family = 'gaussian',
-              iter = 3000, chains = 2, seed = 8765)
-SpModH <- brm(formula = SpRich ~ poly(H, 2) + (H|Archipelago) + absLat + Isolation + HPI, 
+              iter = 3000, chains = 4, seed = 8765)
+SpModH <- brm(formula = SpRich ~ poly(H, 2) + (H|Archipelago) + AreaKM2 + absLat + Isolation + HPI, 
               data = IslandData,
               family = 'gaussian',
               iter = 3000, chains = 4, seed = 1256)
-SpModG <- brm(formula = SpRich ~ poly(G, 2) + (G|Archipelago) + absLat + Isolation + HPI, 
+SpModG <- brm(formula = SpRich ~ poly(G, 2) + (G|Archipelago) + AreaKM2 + absLat + Isolation + HPI, 
               data = IslandData[!(is.na(IslandData$G)),],
               family = 'gaussian',
               iter = 3000, chains = 4, seed = 1256)
@@ -402,19 +402,19 @@ FMod <- brm(formula = FRich2 ~ poly(AreaKM2, 2) + (AreaKM2|Archipelago) + absLat
             data = IslandData,
             family = 'gaussian',
             iter = 3000, chains = 4, seed = 4333)
-FModR <- brm(formula = FRich2 ~ poly(R, 2) + (R|Archipelago) + absLat + Isolation + HPI, 
+FModR <- brm(formula = FRich2 ~ poly(R, 2) + (R|Archipelago) + AreaKM2 + absLat + Isolation + HPI, 
              data = IslandData,
              family = 'gaussian',
              iter = 3000, chains = 4, seed = 2167)
-FModD <- brm(formula = FRich2 ~ poly(D, 2) + (D|Archipelago) + absLat + Isolation + HPI,
+FModD <- brm(formula = FRich2 ~ poly(D, 2) + (D|Archipelago) + AreaKM2 + absLat + Isolation + HPI,
              data = IslandData,
              family = 'gaussian',
              iter = 3000, chains = 4, seed = 3412)
-FModH <- brm(formula = FRich2 ~ poly(H, 2) + (H|Archipelago) + absLat + Isolation + HPI, 
+FModH <- brm(formula = FRich2 ~ poly(H, 2) + (H|Archipelago) + AreaKM2 + absLat + Isolation + HPI, 
              data = IslandData,
              family = 'gaussian',
              iter = 3000, chains = 4, seed = 4987)
-FModG <- brm(formula = FRich2 ~ poly(G, 2) + (G|Archipelago) + absLat + Isolation + HPI, 
+FModG <- brm(formula = FRich2 ~ poly(G, 2) + (G|Archipelago) + AreaKM2 + absLat + Isolation + HPI, 
              data = IslandData[!(is.na(IslandData$G)),],
              family = 'gaussian',
              iter = 3000, chains = 4, seed = 4987)
