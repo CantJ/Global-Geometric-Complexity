@@ -319,7 +319,7 @@ DH_brm_mod <- add_criterion(brm(H2 ~ D + Lat + Lon, family = 'gaussian',
 DH_brm_mod2 <- add_criterion(brm(H2 ~ D + I(D^2) + s(Lat, Lon), family = 'gaussian', 
                                  data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
 # Rugosity versus Fractal Dimension
-DR_brm_mod <- add_criterion(brm(R2 ~ D + + Lat + Lon, family = 'gaussian', 
+DR_brm_mod <- add_criterion(brm(R2 ~ D + Lat + Lon, family = 'gaussian', 
                                 data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
 DR_brm_mod2 <- add_criterion(brm(R2 ~ D + I(D^2) + s(Lat, Lon), family = 'gaussian', 
                                  data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
