@@ -4,28 +4,8 @@
 # Date last modified: July 2024
 # ---------------------------------------------------------------
 
-# Clear working directory
-rm(list = ls())
-
-# Load required packages
-library(terra)
-library(ggplot2)
-library(viridis)
-library(dplyr)
-library(tidyr)
-library(pbapply)
-library(ggeffects)
-library(gmodels)
-library(spsUtil)
-library(brms)
-library(ggdist)
-library(mgcv)
-
 # Set random number seed
 set.seed(457034)
-
-# Modify R digit printing to prevent the rounding of very close values
-options(digits = 22)
 
 # Define file pathways
 RastPath <- '/FILE_DIRECTORY_1/'

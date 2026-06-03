@@ -5,16 +5,9 @@
 # Primary Author: James Cant
 # ------------------------------------------------------------------------------------------------------------
 
-# Clear workspace
-rm(list=ls(all=TRUE))
-
 # Define directory pathways
 fileLoad <- '/File_Directory_1/' # file directory containing downloaded GEBCO products.
 fileSave <- '/File_Directory_2/'
-
-# load necessary packages
-library(terra)
-
 
 #################################################
 # STEP 1: Generate Global Map

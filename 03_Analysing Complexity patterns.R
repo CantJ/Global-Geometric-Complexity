@@ -2,28 +2,8 @@
 # complexity across terrestrial and marine habitats.
 #
 # Author: James Cant
-# Last Modified: May 2024
+# Last Modified: June 2026
 # ------------------------------------------------------------------------------------
-
-# Clear working directory
-rm(list = ls())
-
-# load required files
-library(terra)
-library(arrow)
-library(ggplot2)
-library(hexbin)
-library(ggdist)
-library(viridis)
-library(BayesFactor)
-library(brms)
-library(dplyr)
-library(cmdstanr)
-library(sf)
-library(spsUtil)
-library(gmodels)
-library(ggeffects)
-library(pbapply)
 
 # Define monte carlo brms regression function
 MCbrm <- function(RHbf, DHbf, DRbf, dat, n) {
@@ -57,9 +37,6 @@ MCbrm <- function(RHbf, DHbf, DRbf, dat, n) {
 # Set random number seed
 set.seed(45560)
 
-# Modify R digit printing to prevent the rounding of very close values
-options(digits = 22)
-
 # Define number of Monte Carlo simulations
 mcSim <- 1000
 
@@ -70,14 +47,9 @@ N <- 1000
 
 # Define file pathways
 FilePath <- '/FILE_DIRECTORY 1/'
-DEMPath <- '/FILE_DIRECTORY 2/'
 
 # Define spatial resolution and CRS
-L0 <- res(rast(paste0(DEMPath, 'GlobalDEM_Mollweide_187m.tif')))[1]
-Moll <- crs(rast(paste0(DEMPath, 'GlobalDEM_Mollweide_187m.tif')))
-
-# Is this the first time this script has been run? TRUE or FALSE?
-FirstRun <- FALSE
+L0 <- 187
 
 # If this script is being run for the first time there are a few steps of data cleaning required. However, these can take a while to complete so if 
 # these have been run in the past this step can be skipped with the already processed data loaded directly instead.
@@ -303,29 +275,29 @@ gc()
                        legend.background = element_blank(),
                        legend.box.background = element_rect(colour = "black")))
 
-# Next determine the most appropriate model structure for each of the pairwise analytical comparisons.
+# Next determine the most appropriate model structure for each of the pairwise comparisons.
 # Extract random data sample
-TmpData <- RawData %>% select(Lon, Lat, D, R2, H2) %>% collect() %>% sample_n(size = N, replace = FALSE) 
+TmpData <- RawData %>% dplyr::select(Lon, Lat, D, R2, H2) %>% collect() %>% sample_n(size = N*100, replace = FALSE) 
 
 # Compare linear and non-linear formats for each pairwise complexity variable combination (using a quick brms run-through)
 # Rugosity versus Height Range
-RH_brm_mod <- add_criterion(brm(R2 ~ H2 + Lat + Lon, family = 'gaussian', # GPS details included as fixed effects variables
-                                data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
-RH_brm_mod2 <- add_criterion(brm(R2 ~ H2 + I(H2^2) + s(Lat, Lon), family = 'gaussian', 
-                                 data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
+RH_brm_mod <- qbrm(R2 ~ H2 + gp(Lat, Lon), family = 'gaussian', # GPS details included as fixed effects variables using a Gaussian process smoother
+                                data = TmpData, chains = 1, iter = 4000, warmup = 200)
+RH_brm_mod2 <- qbrm(R2 ~ H2 + I(H2^2) + gp(Lat, Lon), family = 'gaussian', 
+                                 data = TmpData, chains = 1, iter = 1000, warmup = 500)
 # Height Range versus Fractal Dimension
-DH_brm_mod <- add_criterion(brm(H2 ~ D + Lat + Lon, family = 'gaussian', 
+DH_brm_mod <- add_criterion(brm(H2 ~ D + gp(Lat, Lon), family = 'gaussian', 
                                 data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
-DH_brm_mod2 <- add_criterion(brm(H2 ~ D + I(D^2) + s(Lat, Lon), family = 'gaussian', 
+DH_brm_mod2 <- add_criterion(brm(H2 ~ D + I(D^2) + gp(Lat, Lon), family = 'gaussian', 
                                  data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
 # Rugosity versus Fractal Dimension
-DR_brm_mod <- add_criterion(brm(R2 ~ D + Lat + Lon, family = 'gaussian', 
+DR_brm_mod <- add_criterion(brm(R2 ~ D + gp(Lat, Lon), family = 'gaussian', 
                                 data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
-DR_brm_mod2 <- add_criterion(brm(R2 ~ D + I(D^2) + s(Lat, Lon), family = 'gaussian', 
+DR_brm_mod2 <- add_criterion(brm(R2 ~ D + I(D^2) + gp(Lat, Lon), family = 'gaussian', 
                                  data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
 
 # Access model fit
-loo_compare(RH_brm_mod, RH_brm_mod2) 
+compare_models(RH_brm_mod, RH_brm_mod2, criterion = 'waic') 
 loo_compare(DH_brm_mod, DH_brm_mod2)
 loo_compare(DR_brm_mod, DR_brm_mod2) # In all cases the none-linear model is afforded more predictive power.
 
@@ -337,7 +309,7 @@ DR_mod <- bf(R2 ~ D + I(D^2) + s(Lat, Lon))
 #--- Run pairwise analyses
 # Evaluate relationship using Monte Carlo Resampling
 modList <- pblapply(1:mcSim, function(x) { MCbrm(RHbf = RH_mod, DHbf = DH_mod, DRbf = DR_mod, dat = RawData, n = N) })
-saveRDS(modList, paste0(DEMPath, "modList.rds")) # save as a checkpoint
+saveRDS(modList, paste0(FilePath, "modList.rds")) # save as a checkpoint
 
 # Extract R squared statistics
 RH_R <- quiet(ci(unlist(lapply(modList,'[[', 'RH_R'))))

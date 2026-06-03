@@ -9,9 +9,6 @@
 # A word of warning. If running this script to completion for the first time it can take a very long time to complete.
 # It is advised to use parallel processing and HPC computing were possible.
 
-# Clear workspace
-rm(list=ls(all=TRUE))
-
 # Define directory pathways
 filePath <- '/File_Directory_1/'
 TilePath <- '/File_Directory_2/' # directory for storing DEM tile files
@@ -23,25 +20,6 @@ GlobalDEM <- 'GlobalDEM_Mollweide_187m.tif'# Global raster (187m resolution)
 # This file was produced by mosaicing tiles obtained from GEBCO.
 # This DEM was then reprojected to an World Mollweide equal area projection.
 LandMask <- 'LandCover2022_Mollweide_1870m.tif' # this is a raster created using the 2022 CCCI land cover survey product.
-
-# Is this the first time this code is being implemented? I.e. is DEM tiling required
-FirstRun <- FALSE
-
-# load necessary packages
-library(tidyr)
-library(sp)
-library(raster)
-library(parallel)
-library(doParallel)
-library(terra)
-library(dplyr)
-library(readr)
-library(data.table)
-library(arrow)
-library(sf)
-library(habtools)
-library(xpectr)
-library(gtools)
 
 #################################################
 # STEP 1: Define complexity extraction function

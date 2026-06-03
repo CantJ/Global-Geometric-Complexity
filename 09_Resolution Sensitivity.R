@@ -1,30 +1,15 @@
 # This script is for testing the sensitivity of global estimates of fractal dimension and rugosity to increasing map resolution.
 # Accordingly, this script also tests the sensitivity of fractal dimension and rugosity estimates to the changing order of magnitude between L0 and L.
 #
-# Main author: James Cant (jic2@st-andrews.ac.uk)
+# Main author: James Cant
 # Date Last Modified: May 2024
 # -----------------------------------------------------------
-
-# Clear workspace
-rm(list=ls(all=TRUE))
 
 # Define directory pathways
 filePath <- '/FILE_DIRECTORY_1/'
 # Define raster files
 GlobalDEM <- 'GlobalDEM_Mollweide_187m.tif'# Global raster (187m resolution)
 # This file is a global DEM comprising terrestrial topography and ocean bathymetry produced by mosaicing tiles obtained from GEBCO (see Build Global DEM.R)
-
-# load necessary packages
-library(sp)
-library(raster)
-library(terra)
-library(dplyr)
-library(parallel)
-library(data.table)
-library(ggplot2)
-library(viridis)
-library(habtools)
-library(xpectr)
 
 #################################################
 # STEP 1: Define complexity extraction function 

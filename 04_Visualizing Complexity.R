@@ -7,29 +7,8 @@
 # Primary Author: James Cant
 # -----------------------------------------------------------------------------------------
 
-# clear working directory
-rm(list = ls())
-
-# load required files
-library(terra)
-library(raster)
-library(ggplot2)
-library(ggridges)
-library(viridis)
-library(stringr)
-library(dplyr)
-library(brms)
-library(habtools)
-library(fishualize)
-library(sf)
-
-# is this the first time running the below script? i.e. does the ecosystem typology zipped folder need unpacking
-FirstRun <- FALSE
-
 # Set random number seed
 set.seed(458967)
-# prevent rounding of small values
-options(digits = 22)
 
 ###############################
 # STEP 1: Plot global patterns

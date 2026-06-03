@@ -5,23 +5,9 @@
 # Primary Author: James Cant
 # -----------------------------------------------------------------------------------------
 
-# clear working directory
-rm(list = ls())
-
-# load required files
-library(terra)
-library(raster)
-library(stringr)
-library(dplyr)
-library(sf)
-library(vegan)
-
 # Set random number seed
 set.seed(458967)
-# prevent rounding of small values
-options(digits = 22)
-# First time running script?
-FirstRun <- TRUE
+
 # Set up file save directory
 FilePath <- 'E:/Complexity/Visualising Outputs/'
 

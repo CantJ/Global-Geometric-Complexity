@@ -5,16 +5,10 @@
 # Date last modified: July 2024
 # ---------------------------------------------------------------
 
-# Clear working directory
-rm(list = ls())
-
-# Load required packages
-library(terra)
-
 # set up file directory pathways
-LoadPath <- '~/James/WorldClim Rasters/Raw/WorldClim/'
-RastPath <- '~/James/FinalisedFiles/'
-SavePath <- '~/James/WorldClim Rasters/Reprojected/'
+LoadPath <- '/FILE _DIRECTORY 1/'
+RastPath <- '/FILE _DIRECTORY 2/'
+SavePath <- '/FILE _DIRECTORY 3/'
 
 # Load Fractal Dimension raster as re-projection template.
 DRast <- rast(paste0(RastPath, "GlobalFractalDimension.tif"))
