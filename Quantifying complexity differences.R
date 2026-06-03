@@ -46,9 +46,6 @@ if(FirstRun == TRUE) {
   EcoMetadata <- data.frame(Realm = gsub("[^a-zA-Z]", "", EFGs),
                             Biome = gsub(".*?([0-9]+).*", "\\1", EFGs),
                             EFG = sapply(strsplit(EFGs, '\\D+'),'[',3))
-  # match up EFG codes to corresponding ecosystem names
-  EFGcodes <- read.csv(paste0(FilePath, 'EFGcodes_names.csv'))
-  EcoMetadata <- merge(EcoMetadata, EFGcodes, by = c('Realm', 'Biome', 'EFG'))
   # Add appropriate realm name classification
   EcoMetadata$Realm_Name <- NA
   EcoMetadata[EcoMetadata$Realm %in% c('F'),]$Realm_Name <- 'Freshwater'
@@ -89,22 +86,22 @@ if(FirstRun == TRUE) {
     # Open selected ecosystem raster
     RastSelect <- rast(fileNames[ii])
     # Remove minor occurrences of selected ecosystem
-    RastSelect[RastSelect != 1] <- NA
+    try(RastSelect[RastSelect != 1] <- NA)
     # re-load required complexity rasters
     tmpD <- rast(paste0(ComplexRast, 'GlobalFractalDimension.tif'))
     tmpR <- rast(paste0(ComplexRast, 'GlobalRugosity.tif'))
     tmpH <- rast(paste0(ComplexRast, 'GlobalHeightRange.tif'))
     # Ensure rasters align
-    RastSelect <- resample(RastSelect, tmpR)
+    try(RastSelect <- resample(RastSelect, tmpR))
     
     # Isolate corresponding complexity values
-    tmpD[is.na(RastSelect)] <- NA
-    tmpR[is.na(RastSelect)] <- NA
-    tmpH[is.na(RastSelect)] <- NA
-    tmpR <- log10(tmpR) # Apply data transformation to rugosity and height range values
-    tmpH <- log10(tmpH)
-    tmpR[is.infinite(tmpR)] <- NA
-    tmpH[is.infinite(tmpH)] <- NA
+    try(tmpD[is.na(RastSelect)] <- NA)
+    try(tmpR[is.na(RastSelect)] <- NA)
+    try(tmpH[is.na(RastSelect)] <- NA)
+    try(tmpR <- log10(tmpR)) # Apply data transformation to rugosity and height range values
+    try(tmpH <- log10(tmpH))
+    try(tmpR[is.infinite(tmpR)] <- NA)
+    try(tmpH[is.infinite(tmpH)] <- NA)
     
     # Extract distribution of complexity values
     try(EcoTypesD[[ii]] <- na.omit(values(tmpD)))
@@ -114,6 +111,9 @@ if(FirstRun == TRUE) {
   
   ### Worked up to here -----------------------------
 
+  # match up EFG codes to corresponding ecosystem names
+  EFGcodes <- read.csv(paste0(FilePath, 'EFGcodes_names.csv'))
+  EcoMetadata <- merge(EcoMetadata, EFGcodes, by = c('Realm', 'Biome', 'EFG'))
   # remove categories with no data
   EcoTypesDensityD <- EcoTypesDensityD[complete.cases(EcoTypesDF)] 
   EcoTypesDensityR <- EcoTypesDensityR[complete.cases(EcoTypesDF)] 
