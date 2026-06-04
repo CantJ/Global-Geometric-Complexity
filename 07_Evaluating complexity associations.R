@@ -24,9 +24,9 @@ MCbrm <- function(dat, n, measure) {
     mod3 <- quiet(brm(Dbf, family = hurdle_gamma(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
   }
   if(measure == 'CV'){
-    mod1 <- quiet(brm(Hbf, family = gaussian(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
-    mod2 <- quiet(brm(Rbf, family = gaussian(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
-    mod3 <- quiet(brm(Dbf, family = gaussian(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
+    mod1 <- quiet(qbrm(formula = CV2 ~ H2 + I(H2^2) + Lat + Lon, family = gaussian(), data = TmpData))
+    mod2 <- quiet(qbrm(formula = CV2 ~ R2 + I(R2^2) + Lat + Lon, family = gaussian(), data = TmpData))
+    mod3 <- quiet(qbrm(formula = CV2 ~ D + I(D^2) + Lat + Lon, family = gaussian(), data = TmpData))
   }
   if(measure == 'GD'){
     mod1 <- quiet(qbrms(formula = H2 ~ G + Lon + Lat, family = gaussian(), data = TmpData))
@@ -52,10 +52,9 @@ MCbrm <- function(dat, n, measure) {
     pred3 <- conditional_effects(mod3)$G
   }
   if(measure == 'CV'){
-  # Predict population densities (when not zero) using assessed relationship
-  pred1 <- ggpredict(mod1, terms = list(H2 = seq(-7,1.2, 0.01)))$predicted # covers the full range of H2 
-  pred2 <- ggpredict(mod2, terms = list(R2 = seq(-13.7,0.8, 0.01)))$predicted # covers the full range of R2
-  pred3 <- ggpredict(mod3, terms = list(D = seq(2,3,0.01)))$predicted # covers full range of D
+    pred1 <- conditional_effects(mod1)$H2 
+    pred2 <- conditional_effects(mod2)$R2
+    pred3 <- conditional_effects(mod3)$D
   }
   if(measure == 'PD'){
     # Collate and return outputs
@@ -390,13 +389,36 @@ ggplot(data = HPD) +
 # STEP 4: Compare Climate variability and Geometric complexity
 ######################################
 
-# Model the relationship between climate variability and each of the geometric complexity variables
-Hcvbf <- bf(CV2 ~ H2 + s(Lat,Lon))
-Rcvbf <- bf(CV2 ~ R2 + s(Lat,Lon))
-Dcvbf <- bf(CV2 ~ D + s(Lat,Lon))
+if(FirstRun == TRUE){
+  # Extract random data sample
+  TmpData <- RawData %>% dplyr::select(Lon, Lat, D, R2, H2, CV2) %>% collect() %>% sample_n(size = N, replace = FALSE)
+  
+  # Compare linear and non-linear formats for each pairwise complexity variable combination (using a quick brms run-through)
+  # Rugosity
+  RCV_brm_mod <- qbrms(formula = CV2 ~ R2 + Lat + Lon, family = gaussian(), # GPS details included as fixed effects variables to accommodate spatial autocorrelation
+                      data = TmpData)
+  RCV_brm_mod2 <- qbrms(formula = CV2 ~ R2 + I(R2^2) + Lat + Lon, family = gaussian(),
+                       data = TmpData)
+  # Height Range
+  HCV_brm_mod <- qbrms(formula = CV2 ~ H2 + Lat + Lon, family = gaussian(),
+                      data = TmpData)
+  HCV_brm_mod2 <- qbrms(formula = CV2 ~ H2 + I(H2^2) + Lat + Lon, family = gaussian(),
+                       data = TmpData)
+  # Fractal Dimension
+  DCV_brm_mod <- qbrms(formula = CV2 ~ D + Lat + Lon, family = gaussian(),
+                      data = TmpData)
+  DCV_brm_mod2 <- qbrms(formula = CV2 ~ D + I(D^2) + Lat + Lon, family = gaussian(),
+                       data = TmpData)
+  
+  # Access model fit
+  loo_compare(RCV_brm_mod, RCV_brm_mod2) 
+  loo_compare(HCV_brm_mod, HCV_brm_mod2) 
+  loo_compare(DCV_brm_mod, DCV_brm_mod2) # in all cases non-linear is the preferred fit.
+}
 
 # Run Bayesian approach with resampling used to evaluate the relationships between each complexity variable and population density
-CVmods <- pblapply(1:iter, function(i) { MCbrm(Hbf = Hcvbf, Rbf = Rcvbf, Dbf = Dcvbf, dat = RawData, n = N, measure = 'CV') })
+CVmods <- lapply(1:iter, function(i) {print (i)
+  MCbrm(dat = RawData, n = N, measure = 'CV') })
 saveRDS(CVmods, file = paste0(FilePath, "CVmods.rds")) # checkpoint
 
 # Extract R squared statistics
