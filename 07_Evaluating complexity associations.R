@@ -11,33 +11,8 @@ set.seed(457034)
 N <- 100000
 iter <- 100
 
-# Define monte carlo brms regression function for exploring complexity and geodiversity relationship
-Geodiversitybrm <- function(dat, n) {
-  
-  # Extract random data sample
-  TmpData <- dat %>% dplyr::select(Lon, Lat, D, R2, H2, G) %>% collect() %>% sample_n(size = n, replace = FALSE) 
-  
-  # Run Bayesian regression model for each measure of complexity and geodiversity
-  mod1 <- quiet(qbrms(formula = R2 ~ G + Lon + Lat, family = gaussian(), data = TmpData))
-  mod2 <- quiet(qbrms(formula = D ~ G + Lon + Lat, family = gaussian(), data = TmpData))
-  mod3 <- quiet(qbrms(formula = H2 ~ G + Lon + Lat, family = gaussian(), data = TmpData))
-  
-  # Extract model fits
-  mod1R <- bayes_R2(mod1, verbose = F)[1]
-  mod2R <- bayes_R2(mod2, verbose = F)[1]
-  mod3R <- bayes_R2(mod3, verbose = F)[1]
-  
-  # Predict complexity values using assessed relationship
-  pred1 <- conditional_effects(mod1)$G 
-  pred2 <- conditional_effects(mod2)$G
-  pred3 <- conditional_effects(mod3)$G
-  
-  # Collate and return outputs
-  return(list(R = pred1, D = pred2, H = pred3, R_R = mod1R, D_R = mod2R, H_R = mod3R))
-}
-
-# Define monte carlo brms regression function
-MCbrm <- function(Hbf, Rbf, Dbf, dat, n, measure) {
+# Define Monte Carlo brms regression function
+MCbrm <- function(dat, n, measure) {
   
   # Extract random data sample
   TmpData <- dat %>% dplyr::select(Lon, Lat, D, R2, H2, G, PD2, CV2) %>% collect() %>% sample_n(size = n, replace = FALSE) 
@@ -47,16 +22,21 @@ MCbrm <- function(Hbf, Rbf, Dbf, dat, n, measure) {
     mod1 <- quiet(brm(Hbf, family = hurdle_gamma(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
     mod2 <- quiet(brm(Rbf, family = hurdle_gamma(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
     mod3 <- quiet(brm(Dbf, family = hurdle_gamma(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
-  } else {
+  }
+  if(measure == 'CV'){
     mod1 <- quiet(brm(Hbf, family = gaussian(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
     mod2 <- quiet(brm(Rbf, family = gaussian(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
     mod3 <- quiet(brm(Dbf, family = gaussian(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
   }
-  
+  if(measure == 'GD'){
+    mod1 <- quiet(qbrms(formula = H2 ~ G + Lon + Lat, family = gaussian(), data = TmpData))
+    mod2 <- quiet(qbrms(formula = R2 ~ G + Lon + Lat, family = gaussian(), data = TmpData))
+    mod3 <- quiet(qbrms(formula = D ~ G + Lon + Lat, family = gaussian(), data = TmpData))
+  }  
   # Extract model fits
-  mod1R <- bayes_R2(mod1)[1]
-  mod2R <- bayes_R2(mod2)[1]
-  mod3R <- bayes_R2(mod3)[1]
+  mod1R <- bayes_R2(mod1, verbose = F)[1]
+  mod2R <- bayes_R2(mod2, verbose = F)[1]
+  mod3R <- bayes_R2(mod3, verbose = F)[1]
   
   if(measure == 'PD'){
     # Extract hurdle coefficients (probability of entry being zero)
@@ -65,11 +45,18 @@ MCbrm <- function(Hbf, Rbf, Dbf, dat, n, measure) {
     D_hu <- c(fixef(mod3)[2], fixef(mod3)[4])
   }
   
+  # Predict mean relationship
+  if(measure == 'GD'){
+    pred1 <- conditional_effects(mod1)$G 
+    pred2 <- conditional_effects(mod2)$G
+    pred3 <- conditional_effects(mod3)$G
+  }
+  if(measure == 'CV'){
   # Predict population densities (when not zero) using assessed relationship
   pred1 <- ggpredict(mod1, terms = list(H2 = seq(-7,1.2, 0.01)))$predicted # covers the full range of H2 
   pred2 <- ggpredict(mod2, terms = list(R2 = seq(-13.7,0.8, 0.01)))$predicted # covers the full range of R2
   pred3 <- ggpredict(mod3, terms = list(D = seq(2,3,0.01)))$predicted # covers full range of D
-  
+  }
   if(measure == 'PD'){
     # Collate and return outputs
     return(list(H = pred1, R = pred2, D = pred3, H_hu = H_hu, R_hu = R_hu, D_hu = D_hu, H_R = mod1R, R_R = mod2R, D_R = mod3R))
@@ -265,8 +252,8 @@ if(FirstRun == TRUE){
 }
 
 # Run Generalized Additive Models on full data set using resampling to evaluate the relationships between each complexity variable and geodiversity
-GeoList1 <- lapply(1:iter, function(i) { print(i)
-  Geodiversitybrm(dat = RawData, n = N) })
+GeoList <- lapply(1:iter, function(i) { print(i)
+  MCbrm(dat = RawData, n = N, measure = 'GD') })
 saveRDS(GeoList, paste0(FilePath, "GeoList.rds")) # save as a checkpoint
 
 # Extract R squared statistics
