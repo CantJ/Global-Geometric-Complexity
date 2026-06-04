@@ -9,23 +9,23 @@
 MCbrm <- function(RHbf, DHbf, DRbf, dat, n) {
   
   # Extract random data sample
-  TmpData <- dat %>% select(Lon, Lat, D, R2, H2) %>% collect() %>% sample_n(size = n, replace = FALSE) 
+  TmpData <- dat %>% dplyr::select(Lon, Lat, D, R2, H2) %>% collect() %>% sample_n(size = n, replace = FALSE) 
   
   # Run Bayesian regression model for each pairwise combination
-  mod1 <- quiet(brm(RHbf, family = 'gaussian', data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
-  mod2 <- quiet(brm(DHbf, family = 'gaussian', data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
-  mod3 <- quiet(brm(DRbf, family = 'gaussian', data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
+  mod1 <- quiet(qbrms(formula = RHbf, family = gaussian(), data = TmpData))
+  mod2 <- quiet(qbrms(formula = DHbf, family = gaussian(), data = TmpData))
+  mod3 <- quiet(qbrms(formula = DRbf, family = gaussian(), data = TmpData))
   
   # Extract model fits
-  mod1R <- bayes_R2(mod1)[1]
-  mod2R <- bayes_R2(mod2)[1]
-  mod3R <- bayes_R2(mod3)[1]
+  mod1R <- bayes_R2(mod1, verbose = F)[1]
+  mod2R <- bayes_R2(mod2, verbose = F)[1]
+  mod3R <- bayes_R2(mod3, verbose = F)[1]
   
   # Predict complexity values using assessed relationship
-  pred1 <- ggpredict(mod1, terms = list(H2 = seq(-7,2, 0.01)))$predicted # covers the full range of H2 
-  pred2 <- ggpredict(mod2, terms = list(D = seq(2,3,0.001)))$predicted # covers the full range of D
-  pred3 <- ggpredict(mod3, terms = list(D = seq(2,3,0.001)))$predicted
-  
+  pred1 <- conditional_effects(mod1)$H2 
+  pred2 <- conditional_effects(mod2)$D
+  pred3 <- conditional_effects(mod3)$D
+
   # Collate and return outputs
   return(list(RH = pred1, DH = pred2, DR = pred3, RH_R = mod1R, DH_R = mod2R, DR_R = mod3R))
 }
@@ -38,15 +38,12 @@ MCbrm <- function(RHbf, DHbf, DRbf, dat, n) {
 set.seed(45560)
 
 # Define number of Monte Carlo simulations
-mcSim <- 1000
+mcSim <- 100
 
 # Define sample size for plotting (This is to speed up plot processing times)
 Nsize <- 2e+07 # 10% sample
 # Define sample size for mcmc Bayesian regression analysis
-N <- 1000
-
-# Define file pathways
-FilePath <- '/FILE_DIRECTORY 1/'
+N <- 100000
 
 # Define spatial resolution and CRS
 L0 <- 187
@@ -276,39 +273,42 @@ gc()
                        legend.box.background = element_rect(colour = "black")))
 
 # Next determine the most appropriate model structure for each of the pairwise comparisons.
-# Extract random data sample
-TmpData <- RawData %>% dplyr::select(Lon, Lat, D, R2, H2) %>% collect() %>% sample_n(size = N*100, replace = FALSE) 
-
-# Compare linear and non-linear formats for each pairwise complexity variable combination (using a quick brms run-through)
-# Rugosity versus Height Range
-RH_brm_mod <- qbrm(R2 ~ H2 + gp(Lat, Lon), family = 'gaussian', # GPS details included as fixed effects variables using a Gaussian process smoother
-                                data = TmpData, chains = 1, iter = 4000, warmup = 200)
-RH_brm_mod2 <- qbrm(R2 ~ H2 + I(H2^2) + gp(Lat, Lon), family = 'gaussian', 
-                                 data = TmpData, chains = 1, iter = 1000, warmup = 500)
-# Height Range versus Fractal Dimension
-DH_brm_mod <- add_criterion(brm(H2 ~ D + gp(Lat, Lon), family = 'gaussian', 
-                                data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
-DH_brm_mod2 <- add_criterion(brm(H2 ~ D + I(D^2) + gp(Lat, Lon), family = 'gaussian', 
-                                 data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
-# Rugosity versus Fractal Dimension
-DR_brm_mod <- add_criterion(brm(R2 ~ D + gp(Lat, Lon), family = 'gaussian', 
-                                data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
-DR_brm_mod2 <- add_criterion(brm(R2 ~ D + I(D^2) + gp(Lat, Lon), family = 'gaussian', 
-                                 data = TmpData, chains = 1, iter = 1000, warmup = 500, backend = 'cmdstanr'), 'loo')
-
-# Access model fit
-compare_models(RH_brm_mod, RH_brm_mod2, criterion = 'waic') 
-loo_compare(DH_brm_mod, DH_brm_mod2)
-loo_compare(DR_brm_mod, DR_brm_mod2) # In all cases the none-linear model is afforded more predictive power.
+if(FirstRun == TRUE){
+  # Extract random data sample
+  TmpData <- RawData %>% dplyr::select(Lon, Lat, D, R2, H2) %>% collect() %>% sample_n(size = N, replace = FALSE)
+  
+  # Compare linear and non-linear formats for each pairwise complexity variable combination (using a quick brms run-through)
+  # Rugosity versus Height Range
+  RH_brm_mod <- qbrms(formula = R2 ~ H2 + Lat + Lon, family = gaussian(), # GPS details included as fixed effects variables to accommodate spatial autocorrelation
+                      data = TmpData)
+  RH_brm_mod2 <- qbrms(formula = R2 ~ H2 + I(H2^2) + Lat + Lon, family = gaussian(),
+                      data = TmpData)
+  # Height Range versus Fractal Dimension
+  DH_brm_mod <- qbrms(formula = H2 ~ D + Lat + Lon, family = gaussian(),
+                                  data = TmpData)
+  DH_brm_mod2 <- qbrms(formula = H2 ~ D + I(D^2) + Lat + Lon, family = gaussian(),
+                                   data = TmpData)
+  # Rugosity versus Fractal Dimension
+  DR_brm_mod <- qbrms(formula = R2 ~ D + Lat + Lon, family = gaussian(),
+                                  data = TmpData)
+  DR_brm_mod2 <- qbrms(formula = R2 ~ D + I(D^2) + Lat + Lon, family = gaussian(),
+                                   data = TmpData)
+  
+  # Access model fit
+  loo_compare(RH_brm_mod, RH_brm_mod2) # Non-linear is a significantly better fit
+  loo_compare(DH_brm_mod, DH_brm_mod2) # No significant difference between fits, linear will be used as it is a simpler model
+  loo_compare(DR_brm_mod, DR_brm_mod2) # No significant difference between fits, linear will be used as it is a simpler model
+}
 
 # Store most appropriate model structure 
-RH_mod <- bf(R2 ~ H2 + I(H2^2) + s(Lat, Lon))
-DH_mod <- bf(H2 ~ D + I(D^2) + s(Lat, Lon))
-DR_mod <- bf(R2 ~ D + I(D^2) + s(Lat, Lon))
+RH_mod <- bf(R2 ~ H2 + I(H2^2) + Lat + Lon)
+DH_mod <- bf(H2 ~ D + Lat + Lon)
+DR_mod <- bf(R2 ~ D + Lat + Lon)
 
 #--- Run pairwise analyses
 # Evaluate relationship using Monte Carlo Resampling
-modList <- pblapply(1:mcSim, function(x) { MCbrm(RHbf = RH_mod, DHbf = DH_mod, DRbf = DR_mod, dat = RawData, n = N) })
+modList <- lapply(1:mcSim, function(x) { print(x)
+  MCbrm(RHbf = RH_mod, DHbf = DH_mod, DRbf = DR_mod, dat = RawData, n = N) })
 saveRDS(modList, paste0(FilePath, "modList.rds")) # save as a checkpoint
 
 # Extract R squared statistics

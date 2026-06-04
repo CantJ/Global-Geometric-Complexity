@@ -7,35 +7,32 @@
 # Set random number seed
 set.seed(457034)
 
-# Define file pathways
-RastPath <- '/FILE_DIRECTORY_1/'
-
 # Define sample size/and iteration number for resampling analyses
-N <- 1000
-iter <- 1000
+N <- 100000
+iter <- 100
 
-# Define Monte Carlo resampling Generalized Additive Model function
-mc_GAM <- function(dat, n) {
+# Define monte carlo brms regression function for exploring complexity and geodiversity relationship
+Geodiversitybrm <- function(dat, n) {
   
   # Extract random data sample
-  TmpData <- dat %>% select(Lon, Lat, D, R2, H2, G) %>% collect() %>% sample_n(size = n, replace = FALSE) 
+  TmpData <- dat %>% dplyr::select(Lon, Lat, D, R2, H2, G) %>% collect() %>% sample_n(size = n, replace = FALSE) 
   
-  # Run GAM regression comparing the relationship between each measure of complexity and geodiversity
-  mod1 <- bam(R2 ~ s(G) + s(Lon,Lat), family = gaussian(), data = TmpData)
-  mod2 <- bam(D ~ s(G) + s(Lon,Lat), family = gaussian(), data = TmpData)
-  mod3 <- bam(H2 ~ s(G) + s(Lon,Lat), family = gaussian(), data = TmpData)
+  # Run Bayesian regression model for each measure of complexity and geodiversity
+  mod1 <- quiet(qbrms(formula = R2 ~ G + Lon + Lat, family = gaussian(), data = TmpData))
+  mod2 <- quiet(qbrms(formula = D ~ G + Lon + Lat, family = gaussian(), data = TmpData))
+  mod3 <- quiet(qbrms(formula = H2 ~ G + Lon + Lat, family = gaussian(), data = TmpData))
   
   # Extract model fits
-  mod1R <- summary(mod1)$r.sq
-  mod2R <- summary(mod2)$r.sq
-  mod3R <- summary(mod3)$r.sq
+  mod1R <- bayes_R2(mod1, verbose = F)[1]
+  mod2R <- bayes_R2(mod2, verbose = F)[1]
+  mod3R <- bayes_R2(mod3, verbose = F)[1]
   
   # Predict complexity values using assessed relationship
-  pred1 <- ggpredict(mod1, terms = c('G[1:21]'))$predicted
-  pred2 <- ggpredict(mod2, terms = c('G[1:21]'))$predicted
-  pred3 <- ggpredict(mod3, terms = c('G[1:21]'))$predicted
+  pred1 <- conditional_effects(mod1)$G 
+  pred2 <- conditional_effects(mod2)$G
+  pred3 <- conditional_effects(mod3)$G
   
-  # and return outputs
+  # Collate and return outputs
   return(list(R = pred1, D = pred2, H = pred3, R_R = mod1R, D_R = mod2R, H_R = mod3R))
 }
 
@@ -43,7 +40,7 @@ mc_GAM <- function(dat, n) {
 MCbrm <- function(Hbf, Rbf, Dbf, dat, n, measure) {
   
   # Extract random data sample
-  TmpData <- dat %>% select(Lon, Lat, D, R2, H2, PD2, CV2) %>% collect() %>% sample_n(size = n, replace = FALSE) 
+  TmpData <- dat %>% dplyr::select(Lon, Lat, D, R2, H2, G, PD2, CV2) %>% collect() %>% sample_n(size = n, replace = FALSE) 
   
   if(measure == 'PD'){
     # Run Bayesian regression model for each pairwise combination
@@ -86,14 +83,14 @@ MCbrm <- function(Hbf, Rbf, Dbf, dat, n, measure) {
 ######################################
 
 # Load in the Complexity and Geodiversity Rasters
-DRast <- rast(paste0(RastPath, 'GlobalFractalDimension.tif'))
-RRast <- rast(paste0(RastPath, 'GlobalRugosity.tif'))
-HRast <- rast(paste0(RastPath, 'GlobalHeightRange.tif'))
-GRast <- rast(paste0(RastPath, 'Geodiversity_Mollweide_1870m.tif'))  
+DRast <- rast(paste0(FilePath, 'GlobalFractalDimension.tif'))
+RRast <- rast(paste0(FilePath, 'GlobalRugosity.tif'))
+HRast <- rast(paste0(FilePath, 'GlobalHeightRange.tif'))
+GRast <- rast(paste0(FilePath, 'Geodiversity_Mollweide_1870m.tif'))  
 # Load raster of Human Population size
-PopRast <- rast(paste0(RastPath, 'PopCount_Mollweide_1870m.tif'))
+PopRast <- rast(paste0(FilePath, 'PopCount_Mollweide_1870m.tif'))
 # and climate variability
-ClimRast <- rast(paste0(RastPath, 'ClimVar_Mollweide_1870m.tif'))
+ClimRast <- rast(paste0(FilePath, 'ClimVar_Mollweide_1870m.tif'))
 
 # Ensure resolutions and extents match across the geodiversity and geometric complexity rasters
 ext(GRast) <- ext(DRast)
@@ -109,16 +106,6 @@ ext(HRast) == ext(DRast)
 DRast <- mask(DRast, GRast, maskvalues = NA)
 RRast <- mask(RRast, GRast, maskvalues = NA)
 HRast <- mask(HRast, GRast, maskvalues = NA)
-
-# # Estimate spatial autocorrelation of terrestrial complexity measures.
-# Define nearest neighbor matrix (queens format - diagonals included)
-w <- matrix(c(1,1,1,1,0,1,1,1,1), nrow = 3)
-
-#test for spatial autocorrelation using Moran's I (-1 < I > 1)
-# Estimate Moran's I (can take a while to complete)
-D_I <- terra::autocor(DRast, w, method = 'moran', global = TRUE)
-R_I <- terra::autocor(RRast, w, method = 'moran', global = TRUE)  
-H_I <- terra::autocor(HRast, w, method = 'moran', global = TRUE) 
 
 # collate raster variables together in a single data frame
 # Extract GPS coordinates
@@ -248,8 +235,39 @@ tmpData <- RawData %>% select(D, R2, H2, G) %>% collect() %>% sample_n(size = Ns
     theme(axis.line = element_line(color = 'black')))
 
 # Quantify relationships
+
+# Determine the most appropriate model structure for the relationships between each complexity measure and geodiversity 
+if(FirstRun == TRUE){
+  # Extract random data sample
+  TmpData <- RawData %>% dplyr::select(Lon, Lat, D, R2, H2, G) %>% collect() %>% sample_n(size = N, replace = FALSE)
+  
+  # Compare linear and non-linear formats for each pairwise complexity variable combination (using a quick brms run-through)
+  # Rugosity
+  RG_brm_mod <- qbrms(formula = R2 ~ G + Lat + Lon, family = gaussian(), # GPS details included as fixed effects variables to accommodate spatial autocorrelation
+                      data = TmpData)
+  RG_brm_mod2 <- qbrms(formula = R2 ~ G + I(G^2) + Lat + Lon, family = gaussian(),
+                       data = TmpData)
+  # Height Range
+  HG_brm_mod <- qbrms(formula = H2 ~ G + Lat + Lon, family = gaussian(),
+                      data = TmpData)
+  HG_brm_mod2 <- qbrms(formula = H2 ~ G + I(G^2) + Lat + Lon, family = gaussian(),
+                       data = TmpData)
+  # Fractal Dimension
+  DG_brm_mod <- qbrms(formula = D ~ G + Lat + Lon, family = gaussian(),
+                      data = TmpData)
+  DG_brm_mod2 <- qbrms(formula = D ~ G + I(G^2) + Lat + Lon, family = gaussian(),
+                       data = TmpData)
+  
+  # Access model fit
+  loo_compare(RG_brm_mod, RG_brm_mod2) 
+  loo_compare(HG_brm_mod, HG_brm_mod2) 
+  loo_compare(DG_brm_mod, DG_brm_mod2) # in all cases there is no significant difference between fits, linear will be used as it is a simpler model
+}
+
 # Run Generalized Additive Models on full data set using resampling to evaluate the relationships between each complexity variable and geodiversity
-GAMlist <- pblapply(1:iter, function(i) { mc_GAM(dat = RawData, n = N) })
+GeoList1 <- lapply(1:iter, function(i) { print(i)
+  Geodiversitybrm(dat = RawData, n = N) })
+saveRDS(GeoList, paste0(FilePath, "GeoList.rds")) # save as a checkpoint
 
 # Extract R squared statistics
 R_R <- quiet(ci(unlist(lapply(GAMlist,'[[', 'R_R'))))
@@ -279,7 +297,7 @@ GHplot +
 
 # Model the relationship between population density and each of the geometric complexity variables
 # Define model structures for implementing hurdle gamma regression
-Hbf <- bf(PD2 ~ H2 + s(Lat,Lon), # pattern across non-zero entries
+Hbf <- bf(PD2 ~ H2 + s(Lat, Lon), # pattern across non-zero entries
           hu ~ H2) # probability of zero entries
 Rbf <- bf(PD2 ~ R2 + s(Lat,Lon),
           hu ~ R2)
@@ -288,7 +306,7 @@ Dbf <- bf(PD2 ~ D + s(Lat,Lon),
 
 # Run Bayesian approach with resampling used to evaluate the relationships between each complexity variable and population density
 PDlist <- pblapply(1:iter, function(i) { MCbrm(Hbf = Hbf, Rbf = Rbf, Dbf = Dbf, dat = RawData, n = N, measure = 'PD') })
-saveRDS(PDlist, file = paste0(RastPath, "PDlist.rds")) # checkpoint
+saveRDS(PDlist, file = paste0(FilePath, "PDlist.rds")) # checkpoint
 
 # Extract R squared statistics
 H_R <- quiet(ci(unlist(lapply(PDlist,'[[', 'H_R'))))

@@ -8,17 +8,9 @@
 # Set random number seed
 set.seed(458967)
 
-# Set up file save directory
-FilePath <- 'E:/Complexity/Visualising Outputs/'
-
 ###############################
 # STEP 1: Identify Classification Categories (only needed if first time running script)
 ###############################
-
-# Define file pathways for the desired Land use and ecosystem typology files
-EcoTypes <- 'E:/Complexity/Ecotypes/'
-ComplexRast <- 'E:/Complexity/Complexity Analyses/Final Data Products/'
-
 
 if(FirstRun == TRUE) {
   ### Ecosystem types ----------------------------------- 
@@ -46,7 +38,7 @@ if(FirstRun == TRUE) {
   
   ### Land Use types -----------------------------------
   # Open land use raster
-  LandUse <- rast(paste0(ComplexRast, 'LandCover2022_Mollweide_1870m.tif'))
+  LandUse <- rast(paste0(FilePath, 'LandCover2022_Mollweide_1870m.tif'))
   # List unique scenario codes
   LU_cats <- unique((values(LandUse)))
   LU_cats <- LU_cats[!is.na(LU_cats)]
@@ -74,9 +66,9 @@ if(FirstRun == TRUE) {
     # Remove minor occurrences of selected ecosystem
     try(RastSelect[RastSelect != 1] <- NA)
     # re-load required complexity rasters
-    tmpD <- rast(paste0(ComplexRast, 'GlobalFractalDimension.tif'))
-    tmpR <- rast(paste0(ComplexRast, 'GlobalRugosity.tif'))
-    tmpH <- rast(paste0(ComplexRast, 'GlobalHeightRange.tif'))
+    tmpD <- rast(paste0(FilePath, 'GlobalFractalDimension.tif'))
+    tmpR <- rast(paste0(FilePath, 'GlobalRugosity.tif'))
+    tmpH <- rast(paste0(FilePath, 'GlobalHeightRange.tif'))
     # Ensure rasters align
     try(RastSelect <- resample(RastSelect, tmpR))
     
@@ -132,8 +124,8 @@ if(FirstRun == TRUE) {
     # Isolate selected Land Use scenario
     RastSelect[!(values(RastSelect) %in% CatCode)] <- NA 
     # re-load required complexity rasters (multicore processing can't call the files from the global environment)
-    tmpD <- rast(paste0(ComplexRast, 'GlobalFractalDimension.tif'))
-    tmpR <- rast(paste0(ComplexRast, 'GlobalRugosity.tif'))
+    tmpD <- rast(paste0(FilePath, 'GlobalFractalDimension.tif'))
+    tmpR <- rast(paste0(FilePath, 'GlobalRugosity.tif'))
     # Ensure rasters align
     ext(RastSelect) <- ext(tmpD)
     

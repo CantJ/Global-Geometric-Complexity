@@ -10,16 +10,15 @@
 # It is advised to use parallel processing and HPC computing were possible.
 
 # Define directory pathways
-filePath <- '/File_Directory_1/'
-TilePath <- '/File_Directory_2/' # directory for storing DEM tile files
-fileSave <- '/File_Directory_3/' # temporary file directory for saving .csv sub-files
-FinalSave <- '/File_Directory_4/' # final output save location
+
+FilePath <- '/File_Directory_4/' # final output save location
 # Define selected raster files
 GlobalDEM <- 'GlobalDEM_Mollweide_187m.tif'# Global raster (187m resolution)
 # This file is a global DEM comprising terrestrial topography and ocean bathymetry. 
 # This file was produced by mosaicing tiles obtained from GEBCO.
 # This DEM was then reprojected to an World Mollweide equal area projection.
 LandMask <- 'LandCover2022_Mollweide_1870m.tif' # this is a raster created using the 2022 CCCI land cover survey product.
+GeoRast <- ''
 
 #################################################
 # STEP 1: Define complexity extraction function
@@ -201,14 +200,14 @@ ComplexValues <- as.data.frame(list.files(fileSave, full.names = TRUE) %>%
                                  bind_rows)
 # and write to file (Checkpoint)
 # using the arrow package this large csv file is saved in a memory efficient format
-write_parquet(ComplexValues, paste0(FinalSave,'GlobalComplexity.parquet'))
+write_parquet(ComplexValues, paste0(FilePath,'GlobalComplexity.parquet'))
 
 #################################################
 # STEP 4: Clean Complexity estimates
 #################################################
 
 # Reopen dataset using memory efficient format
-ComplexValues <- read_parquet(paste0(FinalSave,'GlobalComplexity.parquet'), as_data_frame = F)
+ComplexValues <- read_parquet(paste0(FilePath,'GlobalComplexity.parquet'), as_data_frame = F)
 
 # How many NAs (due to mollweide projection)
 ComplexValues %>%
@@ -234,10 +233,10 @@ ComplexValues |>
          D = ifelse(is.infinite(D), NA, D)) |>
   mutate(D = ifelse(D<2 | D>3, NA, D)) |>
   collect() |>
-  write_parquet(paste0(FinalSave, 'GlobalComplexity.parquet')) # overwrite output to memory efficient object
+  write_parquet(paste0(FilePath, 'GlobalComplexity.parquet')) # overwrite output to memory efficient object
 
 # Reload updated data file
-ComplexValues <- read_parquet(paste0(FinalSave,'GlobalComplexity.parquet'), as_data_frame = F)
+ComplexValues <- read_parquet(paste0(FilePath,'GlobalComplexity.parquet'), as_data_frame = F)
 
 # Confirm that for all instances where D = 2, then R = 1 and H = 0 and visa-versa.
 ComplexValues %>%
@@ -258,10 +257,10 @@ ComplexValues |>
          D = ifelse(R == 1 & D != 2, NA, D),
          R = ifelse(is.na(D) & is.na(H), NA, R)) |>
   collect() |>
-  write_parquet(paste0(FinalSave, 'GlobalComplexity.parquet'))
+  write_parquet(paste0(FilePath, 'GlobalComplexity.parquet'))
 
 # Reload updated data file to confirm successful data cleaning.
-ComplexValues <- read_parquet(paste0(FinalSave,'GlobalComplexity.parquet'), as_data_frame = F)
+ComplexValues <- read_parquet(paste0(FilePath,'GlobalComplexity.parquet'), as_data_frame = F)
 
 # Check all rugosity values of 1 correspond with fractal dimension values of 2
 ComplexValues %>%
@@ -339,9 +338,9 @@ ext(DRast) == ext(MaskRast)
 # STEP 7: Save Finalized Raster Outputs
 #################################################
 
-writeRaster(HRRast, paste0(FinalSave, 'GlobalHeightRange.tif'))
-writeRaster(RRast, paste0(FinalSave, 'GlobalRugosity.tif'))
-writeRaster(DRast, paste0(FinalSave, 'GlobalFractalDimension.tif'))
-writeRaster(MaskRast, paste0(FinalSave, 'LandMask.tif'))
+writeRaster(HRRast, paste0(FilePath, 'GlobalHeightRange.tif'))
+writeRaster(RRast, paste0(FilePath, 'GlobalRugosity.tif'))
+writeRaster(DRast, paste0(FilePath, 'GlobalFractalDimension.tif'))
+writeRaster(MaskRast, paste0(FilePath, 'LandMask.tif'))
 
 ## ------------------------------------------------------------- End of Code ---------------------------------------

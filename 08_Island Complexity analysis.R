@@ -7,11 +7,6 @@
 # Set random number seed
 set.seed(56570)
 
-# Define file pathways
-ComplexPath <- '/FILE _DIRECTORY 1/' # Containing complexity raster files
-IslandPath <- '/FILE _DIRECTORY 2/' # containing downloaded island shapefiles
-DataPath <- '/FILE _DIRECTORY 3/' # Bird diversity data
-
 # Define function for calculating Island isolation following the method presented in Weigelt & Kreft (2013) Ecography 36: 417-429.
 calcIsolation <- function(island, b) {
   
@@ -43,9 +38,9 @@ if(FirstRun == TRUE) { # this component can take a period to run so is only nece
   
   ### Island Complexity  --------------------
   # Load the Complexity and Geodiversity Rasters
-  DRast <- rast(paste0(ComplexPath, 'GlobalFractalDimension.tif'))
-  RRast <- rast(paste0(ComplexPath, 'GlobalRugosity.tif'))
-  HRast <- rast(paste0(ComplexPath, 'GlobalHeightRange.tif'))
+  DRast <- rast(paste0(FilePath, 'GlobalFractalDimension.tif'))
+  RRast <- rast(paste0(FilePath, 'GlobalRugosity.tif'))
+  HRast <- rast(paste0(FilePath, 'GlobalHeightRange.tif'))
   
   # Ensure resolutions and extents match across the geometric complexity rasters
   ext(RRast) == ext(DRast)
@@ -61,7 +56,7 @@ if(FirstRun == TRUE) { # this component can take a period to run so is only nece
   HRast <- app(HRast, log10)
   
   # Load raster of Human Population size
-  PopRast <- rast(paste0(ComplexPath, 'PopCount_Mollweide_1870m.tif'))
+  PopRast <- rast(paste0(FilePath, 'PopCount_Mollweide_1870m.tif'))
   
   # Load global island shape files (confirming their validity simultaneously)
   BigIslands <- st_read(paste0(IslandPath, 'GlobalIslands_BigIslands.shp'))
@@ -75,7 +70,7 @@ if(FirstRun == TRUE) { # this component can take a period to run so is only nece
   Mainland <- st_read(paste0(IslandPath, 'GlobalIslands_MainLand.shp'))
   
   # Load Raw Islands data
-  IslandData <- read.csv(paste0(DataPath, 'Raw Island Data_Combined.csv'), encoding = "UTF-8", stringsAsFactors = F)
+  IslandData <- read.csv(paste0(BirdData, 'Raw Island Data_Combined.csv'), encoding = "UTF-8", stringsAsFactors = F)
   # Remove entries with no corresponding shape file names and those that represent coral atolls
   IslandData <- IslandData[!(IslandData$NameUSGS == "" & IslandData$NameWCMC == ""),]
   IslandData <- IslandData[is.na(IslandData$Atoll),]
@@ -182,7 +177,7 @@ if(FirstRun == TRUE) { # this component can take a period to run so is only nece
   ### Island Functional diversity --------------------
   
   # Load trait matrix
-  traitDF <- read.csv(paste0(DataPath, 'SpeciesTraits.csv'))
+  traitDF <- read.csv(paste0(BirdData, 'SpeciesTraits.csv'))
   speciesNames <- traitDF$Species.2 
   
   # Isolate traits of interest
@@ -237,7 +232,7 @@ if(FirstRun == TRUE) { # this component can take a period to run so is only nece
     cat(ii, studyList[ii], '\n')
     
     # Isolate file containing corresponding assemblage data
-    fileSelect <- grep(studyList[ii], list.files(DataPath, full.names = TRUE), value = TRUE)
+    fileSelect <- grep(studyList[ii], list.files(BirdData, full.names = TRUE), value = TRUE)
     
     # Open file and identify corresponding assemblage data (presented as occurrence)
     dat <- read.csv(fileSelect, stringsAsFactors = F, check.names = FALSE)
@@ -273,13 +268,13 @@ if(FirstRun == TRUE) { # this component can take a period to run so is only nece
   } 
   
   # Save data file
-  write.csv(IslandData, paste0(ComplexPath, 'IslandComplexityData.csv'), row.names = F)
+  write.csv(IslandData, paste0(FilePath, 'IslandComplexityData.csv'), row.names = F)
   # clear memory space
   rm(funDist, fspaces, traitDF, typesDF)
   gc()
   
 } else { # load already processed data
-  IslandData <- read.csv(paste0(ComplexPath, 'IslandComplexityData.csv'))
+  IslandData <- read.csv(paste0(FilePath, 'IslandComplexityData.csv'))
 }
 
 # Estimate absolute latitude

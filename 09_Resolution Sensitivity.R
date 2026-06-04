@@ -5,8 +5,6 @@
 # Date Last Modified: May 2024
 # -----------------------------------------------------------
 
-# Define directory pathways
-filePath <- '/FILE_DIRECTORY_1/'
 # Define raster files
 GlobalDEM <- 'GlobalDEM_Mollweide_187m.tif'# Global raster (187m resolution)
 # This file is a global DEM comprising terrestrial topography and ocean bathymetry produced by mosaicing tiles obtained from GEBCO (see Build Global DEM.R)
@@ -108,7 +106,7 @@ VaryingL <- function(ii){
 }
 
 # load Global DEM raster
-DEM <- rast(paste0(filePath, GlobalDEM))
+DEM <- rast(paste0(FilePath, GlobalDEM))
 
 # define L0 (minimum resolution)
 L0 <- res(DEM)[1]
@@ -125,7 +123,7 @@ L <- c(L0*c(2,3,4,5,6,10^1,10^2))
 
 # Test how varying L between two and less than one order of magnitude (18.7km and <1km) influences complexity estimates
 LTest <- lapply(length(L):1, VaryingL)
-saveRDS(LTest, paste0(filePath, "LTest.rds")) # save as a checkpoint
+saveRDS(LTest, paste0(FilePath, "LTest.rds")) # save as a checkpoint
 
 # Convert outputs into a data frame
 LTestdf <- rbindlist(LTest)

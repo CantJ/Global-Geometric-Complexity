@@ -14,13 +14,10 @@ set.seed(458967)
 # STEP 1: Plot global patterns
 ###############################
 
-# Define directory pathway to raster files
-ComplexRast <- '/FILE_DIRECTORY_1/'
-
 # Load Complexity rasters
-DRast <- rast(paste0(ComplexRast, 'GlobalFractalDimension.tif'))
-RRast <- rast(paste0(ComplexRast, 'GlobalRugosity.tif'))
-HRast <- rast(paste0(ComplexRast, 'GlobalHeightRange.tif'))
+DRast <- rast(paste0(FilePath, 'GlobalFractalDimension.tif'))
+RRast <- rast(paste0(FilePath, 'GlobalRugosity.tif'))
+HRast <- rast(paste0(FilePath, 'GlobalHeightRange.tif'))
 
 # plot maps
 # Fractal Dimension
@@ -47,12 +44,6 @@ plot(log10(HRast), col = fish(50, direction = 1, option = 'Acanthurus_leucostern
 ###############################
 # STEP 2: Ecosystem typology and Land Use Data Download
 ###############################
-
-# Define file pathways for processing the Land use and ecosystem typology files
-EcoTypes <- '/FILE_DIRECTORY_2/' # These maps can be downloaded from the following repository: 
-# Keith, D. et al. (2020). Indicative distribution maps for Ecosystem Functional Groups - Level 3 of IUCN Global Ecosystem Typology (Version 2.1.1) [Data set]. Zenodo. DOI: 10.5281/zenodo.3546513
-# and unzipped using untar() [see below].
-FilePath <- '/FILE_DIRECTORY_3/'
 
 # Extract typology maps from downloaded typology .tar file
 if(FirstRun == TRUE) { untar(paste0(FilePath, "all-maps-raster-geotiff.tar.bz2"), exdir = EcoTypes) }
@@ -97,7 +88,7 @@ if(FirstRun == TRUE) {
   ### Land Use types -----------------------------------
 
   # Open land use raster
-  LandUse <- rast(paste0(ComplexRast, 'LandCover2022_Mollweide_1870m.tif'))
+  LandUse <- rast(paste0(FilePath, 'LandCover2022_Mollweide_1870m.tif'))
   # List unique scenario codes
   LU_cats <- unique((values(LandUse)))
   LU_cats <- LU_cats[!is.na(LU_cats)]
@@ -138,8 +129,8 @@ if(FirstRun == TRUE) {
     # Remove minor occurrences of selected ecosystem
     RastSelect[RastSelect != 1] <- NA
     # re-load required complexity rasters (multicore processing can't call the files from the global environment)
-    tmpD <- rast(paste0(ComplexRast, 'GlobalFractalDimension.tif'))
-    tmpR <- rast(paste0(ComplexRast, 'GlobalRugosity.tif'))
+    tmpD <- rast(paste0(FilePath, 'GlobalFractalDimension.tif'))
+    tmpR <- rast(paste0(FilePath, 'GlobalRugosity.tif'))
     # Ensure rasters align
     RastSelect <- resample(RastSelect, tmpR)
   
@@ -207,8 +198,8 @@ if(FirstRun == TRUE) {
     # Isolate selected Land Use scenario
     RastSelect[!(values(RastSelect) %in% CatCode)] <- NA 
     # re-load required complexity rasters (multicore processing can't call the files from the global environment)
-    tmpD <- rast(paste0(ComplexRast, 'GlobalFractalDimension.tif'))
-    tmpR <- rast(paste0(ComplexRast, 'GlobalRugosity.tif'))
+    tmpD <- rast(paste0(FilePath, 'GlobalFractalDimension.tif'))
+    tmpR <- rast(paste0(FilePath, 'GlobalRugosity.tif'))
     # Ensure rasters align
     ext(RastSelect) <- ext(tmpD)
   

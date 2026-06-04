@@ -5,16 +5,12 @@
 # Primary Author: James Cant
 # ------------------------------------------------------------------------------------------------------------
 
-# Define directory pathways
-fileLoad <- '/File_Directory_1/' # file directory containing downloaded GEBCO products.
-fileSave <- '/File_Directory_2/'
-
 #################################################
 # STEP 1: Generate Global Map
 #################################################
 
 # Locate raw GEBCO products
-mapList <- list.files(fileLoad, pattern = '.tif', full.names = TRUE)
+mapList <- list.files(FilePath, pattern = '.tif', full.names = TRUE)
 # these files are a series of tiles outlining elevation patterns of the earths surface.
 # They are currently projected in WGS84 format and to a resolution of 15 arc-seconds.
 
@@ -23,7 +19,7 @@ RastList <- lapply(mapList, rast)
 GlobalRast <- terra::merge(sprc(RastList)) # this is a large raster and can take a period of time to compute.
 
 # Save raster file
-writeRaster(GlobalRast, paste0(fileSave, 'GlobalDEM_WGS84.tif'))
+writeRaster(GlobalRast, paste0(filePath, 'GlobalDEM_WGS84.tif'))
 
 # The size of this raster file necessitates that reprojection is carried out using QGIS (due to the removal of rGDAL related packages from CRAN)
 # Using QGIS this raster file is to be reprojected to a Mollweide projection (EPSG: 9001, ESR1: 54009) with a resolution of 187m using bilinear interpolation.
