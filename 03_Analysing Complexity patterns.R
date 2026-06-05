@@ -30,6 +30,21 @@ MCbrm <- function(RHbf, DHbf, DRbf, dat, n) {
   return(list(RH = pred1, DH = pred2, DR = pred3, RH_R = mod1R, DH_R = mod2R, DR_R = mod3R))
 }
 
+# Function for computing vector confidence intervals.
+CI95 <- function(vector) {
+  # Standard deviation of sample
+  s <- sd(vector)
+  # Sample size
+  n <- length(vector)
+  # Mean of sample
+  vmean <- mean(vector)
+  # Error according to t distribution
+  error <- qt(0.975, df = n - 1) * s / sqrt(n)
+  # summary stats as a vector
+  result <- c('Mean' = vmean, '2_5%' = vmean - error, '97_5%' = vmean + error)
+  return(result)
+}
+
 ######################################
 # STEP 1: Data Cleaning
 ######################################
@@ -312,29 +327,26 @@ modList <- lapply(1:mcSim, function(x) { print(x)
 saveRDS(modList, paste0(FilePath, "modList.rds")) # save as a checkpoint
 
 # Extract R squared statistics
-RH_R <- quiet(ci(unlist(lapply(modList,'[[', 'RH_R'))))
-DH_R <- quiet(ci(unlist(lapply(modList,'[[', 'DH_R'))))
-DR_R <- quiet(ci(unlist(lapply(modList,'[[', 'DR_R'))))
+RH_R <- CI95(unlist(lapply(modList,'[[', 'RH_R')))
+DH_R <- CI95(unlist(lapply(modList,'[[', 'DH_R')))
+DR_R <- CI95(unlist(lapply(modList,'[[', 'DR_R')))
 
 # Extract predicted relationships for plotting
-RH <- quiet(as.data.frame(t(apply(sapply(modList, '[[', 'RH'), 1, ci)))); RH$H2 <- seq(-7,2,0.01); names(RH) <- c('R2','Lower','Upper','SE','H2') # Rugosity and Height Range
-DH <- quiet(as.data.frame(t(apply(sapply(modList, '[[', 'DH'), 1, ci)))); DH$D <- seq(2,3,0.001); names(DH) <- c('H2','Lower','Upper','SE','D') # Fractal Dimension and Height Range
-DR <- quiet(as.data.frame(t(apply(sapply(modList, '[[', 'DR'), 1, ci)))); DR$D <- seq(2,3,0.001); names(DR) <- c('R2','Lower','Upper','SE','D') # Fractal Dimension and Rugosity
+RH <- do.call(rbind, lapply(modList, '[[', 'RH')) %>% arrange(H2); names(RH) <- c('H2','R2','Lower','Upper') # Rugosity and Height Range
+DH <- do.call(rbind, lapply(modList, '[[', 'DH')) %>% arrange(D); names(DH) <- c('D','H2','Lower','Upper') # Fractal Dimension and Height Range
+DR <- do.call(rbind, lapply(modList, '[[', 'DR')) %>% arrange(D); names(DR) <- c('D','R2','Lower','Upper') # Fractal Dimension and Rugosity
 
 # Add details to plots
 # Rugosity and Height Range
-RH_plot + 
-  geom_ribbon(aes(x = H2, ymin = Lower, ymax = Upper), fill = 'red', alpha = 1, data = RH, inherit.aes = FALSE) +
-  geom_line(aes(x = H2, y = R2), col = 'red', linetype = 'solid', linewidth = 0.5, data = RH, inherit.aes = FALSE) # adding the mean line ensures a clean line across the plot.
-
+RH_plot +
+  geom_smooth(aes(x = H2, y = R2), se = F, col = 'red', linetype = 'solid', linewidth = 2, data = RH, inherit.aes = FALSE)
+  
 # Fractal Dimension and Height range
 DH_plot +
-  geom_ribbon(aes(x = D, ymin = Lower, ymax = Upper), fill = 'red', alpha = 1, data = DH, inherit.aes = FALSE) +
-  geom_line(aes(x = D, y = H2), col = 'red', linetype = 'solid', linewidth = 0.5, data = DH, inherit.aes = FALSE)
+  geom_smooth(aes(x = D, y = H2), se = F, col = 'red', linetype = 'solid', linewidth = 2, data = DH, inherit.aes = FALSE)
 
 # Fractal Dimension and Height Range
 DR_plot +
-  geom_ribbon(aes(x = D, ymin = Lower, ymax = Upper), fill = 'red', alpha = 1, data = DR, inherit.aes = FALSE) +
-  geom_line(aes(x = D, y = R2), col = 'red', linetype = 'solid', linewidth = 0.5, data = DR, inherit.aes = FALSE)
+  geom_smooth(aes(x = D, y = R2), se = F, col = 'red', linetype = 'solid', linewidth = 2, data = DR, inherit.aes = FALSE)
 
 # ----------------------------------------------------- End of Code ---------------------------------

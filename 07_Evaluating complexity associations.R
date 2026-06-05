@@ -15,34 +15,41 @@ iter <- 100
 MCbrm <- function(dat, n, measure) {
   
   # Extract random data sample
-  TmpData <- dat %>% dplyr::select(Lon, Lat, D, R2, H2, G, PD2, CV2) %>% collect() %>% sample_n(size = n, replace = FALSE) 
-  
+  TmpData <- dat %>% dplyr::select(Lon, Lat, D, R2, H2, G, PD2) %>% collect() %>% sample_n(size = n, replace = FALSE) 
   if(measure == 'PD'){
-    # Run Bayesian regression model for each pairwise combination
-    mod1 <- quiet(brm(Hbf, family = hurdle_gamma(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
-    mod2 <- quiet(brm(Rbf, family = hurdle_gamma(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
-    mod3 <- quiet(brm(Dbf, family = hurdle_gamma(), data = TmpData, chains = 1, iter = 2000, warmup = 1000, backend = 'cmdstanr'))
+  # Separate zero and non-zero entries
+    PDdat <- TmpData %>% filter(PD2>0)
+    TmpData$Zero <- NA
+    TmpData$Zero[TmpData$PD2 > 0] <- 0
+    TmpData$Zero[TmpData$PD2 == 0] <- 1
   }
-  if(measure == 'CV'){
-    mod1 <- quiet(qbrm(formula = CV2 ~ H2 + I(H2^2) + Lat + Lon, family = gaussian(), data = TmpData))
-    mod2 <- quiet(qbrm(formula = CV2 ~ R2 + I(R2^2) + Lat + Lon, family = gaussian(), data = TmpData))
-    mod3 <- quiet(qbrm(formula = CV2 ~ D + I(D^2) + Lat + Lon, family = gaussian(), data = TmpData))
+  
+  # Run Bayesian regression model for each pairwise combination
+  if(measure == 'PD'){
+    mod1 <- quiet(qbrms(formula = PD2 ~ H2 + Lat + Lon, family = gamma(), data = PDdat))
+    mod2 <- quiet(qbrms(formula = PD2 ~ R2 + Lat + Lon, family = gamma(), data = PDdat))
+    mod3 <- quiet(qbrms(formula = PD2 ~ D + Lat + Lon, family = gamma(), data = PDdat))
   }
   if(measure == 'GD'){
     mod1 <- quiet(qbrms(formula = H2 ~ G + Lon + Lat, family = gaussian(), data = TmpData))
     mod2 <- quiet(qbrms(formula = R2 ~ G + Lon + Lat, family = gaussian(), data = TmpData))
     mod3 <- quiet(qbrms(formula = D ~ G + Lon + Lat, family = gaussian(), data = TmpData))
-  }  
-  # Extract model fits
+  } 
+  
+  # Extract model fits (R2)
   mod1R <- bayes_R2(mod1, verbose = F)[1]
   mod2R <- bayes_R2(mod2, verbose = F)[1]
   mod3R <- bayes_R2(mod3, verbose = F)[1]
-  
+
+  # Extract hurdle coefficients as required (probability of entry being zero)
   if(measure == 'PD'){
-    # Extract hurdle coefficients (probability of entry being zero)
-    H_hu <- c(fixef(mod1)[2], fixef(mod1)[4])
-    R_hu <- c(fixef(mod2)[2], fixef(mod2)[4])
-    D_hu <- c(fixef(mod3)[2], fixef(mod3)[4])
+    zero1 <- quiet(qbrms(formula = Zero ~ H2 + Lat + Lon, family = binomial(), data = TmpData))
+    zero2 <- quiet(qbrms(formula = Zero ~ R2 + Lat + Lon, family = binomial(), data = TmpData))
+    zero3 <- quiet(qbrms(formula = Zero ~ D + Lat + Lon, family = binomial(), data = TmpData))
+    # Extract coefficients
+    H_hu <- c(coef(zero1)[1], coef(zero1)[2])
+    R_hu <- c(coef(zero2)[1], coef(zero2)[2])
+    D_hu <- c(coef(zero3)[1], coef(zero3)[2])
   }
   
   # Predict mean relationship
@@ -51,17 +58,34 @@ MCbrm <- function(dat, n, measure) {
     pred2 <- conditional_effects(mod2)$G
     pred3 <- conditional_effects(mod3)$G
   }
-  if(measure == 'CV'){
+  if(measure == 'PD'){
     pred1 <- conditional_effects(mod1)$H2 
     pred2 <- conditional_effects(mod2)$R2
     pred3 <- conditional_effects(mod3)$D
   }
+
+  # Collate and return outputs
   if(measure == 'PD'){
-    # Collate and return outputs
     return(list(H = pred1, R = pred2, D = pred3, H_hu = H_hu, R_hu = R_hu, D_hu = D_hu, H_R = mod1R, R_R = mod2R, D_R = mod3R))
-  } else {
+  } 
+  if(measure == 'PD') {
     return(list(H = pred1, R = pred2, D = pred3, H_R = mod1R, R_R = mod2R, D_R = mod3R))
   }
+}
+
+# Function for computing vector confidence intervals.
+CI95 <- function(vector) {
+  # Standard deviation of sample
+  s <- sd(vector)
+  # Sample size
+  n <- length(vector)
+  # Mean of sample
+  vmean <- mean(vector)
+  # Error according to t distribution
+  error <- qt(0.975, df = n - 1) * s / sqrt(n)
+  # summary stats as a vector
+  result <- c('Mean' = vmean, '2_5%' = vmean - error, '97_5%' = vmean + error)
+  return(result)
 }
 
 ######################################
@@ -171,7 +195,7 @@ RawData %>%
 # Plot relationships
 # Define sample size for plotting (This is to speed up plot processing times)
 Nsize <- 2e+07 
-tmpData <- RawData %>% select(D, R2, H2, G) %>% collect() %>% sample_n(size = Nsize, replace = FALSE) # isolate plotting sample
+tmpData <- RawData %>% dplyr::select(D, R2, H2, G) %>% collect() %>% sample_n(size = Nsize, replace = FALSE) # isolate plotting sample
 # Fractal Dimension
 (GDplot <- ggplot(tmpData, aes(x = G, y = D, fill = factor(G))) +
     stat_halfeye(adjust = 0.5, show.legend = FALSE, .width = 0, point_colour = NA) +
@@ -221,13 +245,12 @@ tmpData <- RawData %>% select(D, R2, H2, G) %>% collect() %>% sample_n(size = Ns
     theme(axis.line = element_line(color = 'black')))
 
 # Quantify relationships
-
 # Determine the most appropriate model structure for the relationships between each complexity measure and geodiversity 
 if(FirstRun == TRUE){
   # Extract random data sample
   TmpData <- RawData %>% dplyr::select(Lon, Lat, D, R2, H2, G) %>% collect() %>% sample_n(size = N, replace = FALSE)
   
-  # Compare linear and non-linear formats for each pairwise complexity variable combination (using a quick brms run-through)
+  # Compare linear and non-linear formats for each complexity variable GEODIVERSITY combination
   # Rugosity
   RG_brm_mod <- qbrms(formula = R2 ~ G + Lat + Lon, family = gaussian(), # GPS details included as fixed effects variables to accommodate spatial autocorrelation
                       data = TmpData)
@@ -250,48 +273,69 @@ if(FirstRun == TRUE){
   loo_compare(DG_brm_mod, DG_brm_mod2) # in all cases there is no significant difference between fits, linear will be used as it is a simpler model
 }
 
-# Run Generalized Additive Models on full data set using resampling to evaluate the relationships between each complexity variable and geodiversity
+# Run Bayesian models to evaluate the relationships between each complexity variable and geodiversity
 GeoList <- lapply(1:iter, function(i) { print(i)
   MCbrm(dat = RawData, n = N, measure = 'GD') })
 saveRDS(GeoList, paste0(FilePath, "GeoList.rds")) # save as a checkpoint
 
 # Extract R squared statistics
-R_R <- quiet(ci(unlist(lapply(GAMlist,'[[', 'R_R'))))
-D_R <- quiet(ci(unlist(lapply(GAMlist,'[[', 'D_R'))))
-H_R <- quiet(ci(unlist(lapply(GAMlist,'[[', 'H_R'))))
+(R_R <- CI95(unlist(lapply(GeoList,'[[', 'R_R'))))
+(D_R <- CI95(unlist(lapply(GeoList,'[[', 'D_R'))))
+(H_R <- CI95(unlist(lapply(GeoList,'[[', 'H_R'))))
 
 # Extract predicted relationships for plotting
-RG <- quiet(as.data.frame(t(apply(sapply(GAMlist, '[[', 'R'), 1, ci)))); RG$G <- as.numeric(1:21); names(RG) <- c('R2','Lower','Upper','SE','G') # Rugosity
-DG <- quiet(as.data.frame(t(apply(sapply(GAMlist, '[[', 'D'), 1, ci)))); DG$G <- as.numeric(1:21); names(DG) <- c('D','Lower','Upper','SE','G') # Fractal Dimension
-HG <- quiet(as.data.frame(t(apply(sapply(GAMlist, '[[', 'H'), 1, ci)))); HG$G <- as.numeric(1:21); names(HG) <- c('H2','Lower','Upper','SE','G') # Height Range
+RG <- do.call(rbind, lapply(GeoList, '[[', 'R')) %>% arrange(G); names(RG) <- c('G','R2','Lower','Upper') # Rugosity and Height Range
+DG <- do.call(rbind, lapply(GeoList, '[[', 'D')) %>% arrange(G); names(DG) <- c('G','D','Lower','Upper') # Fractal Dimension and Height Range
+HG <- do.call(rbind, lapply(GeoList, '[[', 'H')) %>% arrange(G); names(HG) <- c('G','H2','Lower','Upper') # Fractal Dimension and Rugosity
 
 # Add details to plots
 # Rugosity
 GRplot + 
-  geom_ribbon(aes(x = G, ymin = Lower, ymax = Upper), fill = 'Black', alpha = 0.9, data = RG, inherit.aes = FALSE)
+  geom_smooth(aes(x = G, y = R2), se = F, col = 'black', linetype = 'solid', linewidth = 2, data = RG, inherit.aes = FALSE)
 # Fractal Dimension
 GDplot + 
-  geom_ribbon(aes(x = G, ymin = Lower, ymax = Upper), fill = 'Black', alpha = 0.9, data = DG, inherit.aes = FALSE) 
+  geom_smooth(aes(x = G, y = D), se = F, col = 'black', linetype = 'solid', linewidth = 2, data = DG, inherit.aes = FALSE)
 # Height Range
 GHplot + 
-  geom_ribbon(aes(x = G, ymin = Lower, ymax = Upper), fill = 'Black', alpha = 0.9, data = HG, inherit.aes = FALSE) 
-
+  geom_smooth(aes(x = G, y = H2), se = F, col = 'black', linetype = 'solid', linewidth = 2, data = HG, inherit.aes = FALSE)
 
 ######################################
 # STEP 3: Population density and Geometric complexity
 ######################################
 
 # Model the relationship between population density and each of the geometric complexity variables
-# Define model structures for implementing hurdle gamma regression
-Hbf <- bf(PD2 ~ H2 + s(Lat, Lon), # pattern across non-zero entries
-          hu ~ H2) # probability of zero entries
-Rbf <- bf(PD2 ~ R2 + s(Lat,Lon),
-          hu ~ R2)
-Dbf <- bf(PD2 ~ D + s(Lat,Lon),
-          hu ~ D)
+# A modified hurdle modelling approach will be used to deal with the large numbers of zeros in the data.
+# Firstly however, what is the most appropriate model fit for the non-zero data.
+if(FirstRun == TRUE){
+  # Extract random data sample whilst dropping zero entries
+  TmpData <- RawData %>% dplyr::select(Lon, Lat, D, R2, H2, PD2) %>% filter(PD2>0) %>% collect() %>% sample_n(size = N, replace = FALSE)
+  
+  # Compare linear and non-linear formats for each pairwise complexity variable-population density combination.
+  # Rugosity
+  R_mod <- qbrms(formula = PD2 ~ R2 + Lat + Lon, family = gaussian(),
+                      data = TmpData)
+  R_mod2 <- qbrms(formula = PD2 ~ R2 + I(R2^2) + Lat + Lon, family = gaussian(),
+                       data = TmpData)
+  # Height Range
+  H_mod <- qbrms(formula = PD2 ~ H2 + Lat + Lon, family = gaussian(),
+                      data = TmpData)
+  H_mod2 <- qbrms(formula = PD2 ~ H2 + I(D^2) + Lat + Lon, family = gaussian(),
+                       data = TmpData)
+  # Fractal Dimension
+  D_mod <- qbrms(formula = PD2 ~ D + Lat + Lon, family = gaussian(),
+                      data = TmpData)
+  D_mod2 <- qbrms(formula = PD2 ~ D + I(D^2) + Lat + Lon, family = gaussian(),
+                       data = TmpData)
+  
+  # Access model fit
+  loo_compare(R_mod, R_mod2) 
+  loo_compare(H_mod, H_mod2) 
+  loo_compare(D_mod, D_mod2) # in all cases there is no significant difference between fits, linear will be used as it is a simpler model
+}
 
 # Run Bayesian approach with resampling used to evaluate the relationships between each complexity variable and population density
-PDlist <- pblapply(1:iter, function(i) { MCbrm(Hbf = Hbf, Rbf = Rbf, Dbf = Dbf, dat = RawData, n = N, measure = 'PD') })
+PDlist <- lapply(1:iter, function(i) { print(i)
+  MCbrm(dat = RawData, n = N, measure = 'PD') })
 saveRDS(PDlist, file = paste0(FilePath, "PDlist.rds")) # checkpoint
 
 # Extract R squared statistics
@@ -384,113 +428,5 @@ ggplot(data = HPD) +
                      axis.text.y = element_text(size = 30, colour = "black"),
                      panel.border = element_blank()) +
   theme(axis.line = element_line(color = 'black'))
-
-######################################
-# STEP 4: Compare Climate variability and Geometric complexity
-######################################
-
-if(FirstRun == TRUE){
-  # Extract random data sample
-  TmpData <- RawData %>% dplyr::select(Lon, Lat, D, R2, H2, CV2) %>% collect() %>% sample_n(size = N, replace = FALSE)
-  
-  # Compare linear and non-linear formats for each pairwise complexity variable combination (using a quick brms run-through)
-  # Rugosity
-  RCV_brm_mod <- qbrms(formula = CV2 ~ R2 + Lat + Lon, family = gaussian(), # GPS details included as fixed effects variables to accommodate spatial autocorrelation
-                      data = TmpData)
-  RCV_brm_mod2 <- qbrms(formula = CV2 ~ R2 + I(R2^2) + Lat + Lon, family = gaussian(),
-                       data = TmpData)
-  # Height Range
-  HCV_brm_mod <- qbrms(formula = CV2 ~ H2 + Lat + Lon, family = gaussian(),
-                      data = TmpData)
-  HCV_brm_mod2 <- qbrms(formula = CV2 ~ H2 + I(H2^2) + Lat + Lon, family = gaussian(),
-                       data = TmpData)
-  # Fractal Dimension
-  DCV_brm_mod <- qbrms(formula = CV2 ~ D + Lat + Lon, family = gaussian(),
-                      data = TmpData)
-  DCV_brm_mod2 <- qbrms(formula = CV2 ~ D + I(D^2) + Lat + Lon, family = gaussian(),
-                       data = TmpData)
-  
-  # Access model fit
-  loo_compare(RCV_brm_mod, RCV_brm_mod2) 
-  loo_compare(HCV_brm_mod, HCV_brm_mod2) 
-  loo_compare(DCV_brm_mod, DCV_brm_mod2) # in all cases non-linear is the preferred fit.
-}
-
-# Run Bayesian approach with resampling used to evaluate the relationships between each complexity variable and population density
-CVmods <- lapply(1:iter, function(i) {print (i)
-  MCbrm(dat = RawData, n = N, measure = 'CV') })
-saveRDS(CVmods, file = paste0(FilePath, "CVmods.rds")) # checkpoint
-
-# Extract R squared statistics
-(cvR_R <- quiet(ci(unlist(lapply(CVmods,'[[', 'R_R')))))
-(cvD_R <- quiet(ci(unlist(lapply(CVmods,'[[', 'D_R')))))
-(cvH_R <- quiet(ci(unlist(lapply(CVmods,'[[', 'H_R')))))
-
-# Extract predicted relationships for plotting
-Rvec <- seq(-13.7,0.8, 0.01); Dvec <- seq(2,3, 0.01); Hvec <- seq(-7,1.2, 0.01)
-RCV <- quiet(as.data.frame(t(apply(sapply(CVmods, '[[', 'R'), 1, ci)))); RCV$R <- Rvec; names(RCV) <- c('CV','Lower','Upper','SE','R') # Rugosity
-DCV <- quiet(as.data.frame(t(apply(sapply(CVmods, '[[', 'D'), 1, ci)))); DCV$D <- Dvec; names(DCV) <- c('CV','Lower','Upper','SE','D') # Fractal Dimension
-HCV <- quiet(as.data.frame(t(apply(sapply(CVmods, '[[', 'H'), 1, ci)))); HCV$H <- Hvec; names(HCV) <- c('CV','Lower','Upper','SE','H') # Height Range
-
-# Plot relationships
-# Rugosity
-(CVRplot <- ggplot(RCV) +
-    geom_ribbon(aes(x = R, ymin = Lower, ymax = Upper), fill = '#fc8961', alpha = 0.5) +
-    geom_line(aes(x = R, y = CV), col = '#000004', linewidth = 1.1, linetype = 'dashed') + 
-    xlab('\nRugosity') +
-    ylab('Climate Variability\n') +
-    scale_x_continuous(expand = c(0,0), labels = function(i) format((10^i), digits = 2)) +
-    scale_y_continuous(limits = c(log10(0.65+1),log10(1.13+1)), labels = function(i) format((10^i)-1, digits = 2)) +
-    scale_fill_gradientn(colours = viridis(n = 50, option = 'cividis'),
-                         guide = guide_colorbar(ticks = F, title = 'Density',
-                                                reverse = F, label = T,
-                                                na.value = "white")) +
-    theme_bw() + theme(panel.grid.major = element_blank(),
-                       panel.grid.minor = element_blank(),
-                       axis.title = element_text(size = 15, colour = 'black'),
-                       axis.text.x = element_text(size = 15, colour = "black"), 
-                       axis.text.y = element_text(size = 15, colour = "black"),
-                       panel.border = element_blank()) +
-    theme(axis.line = element_line(color = 'black')))
-
-# Height Range
-(CVHplot <- ggplot(HCV) +
-    geom_ribbon(aes(x = H, ymin = Lower, ymax = Upper), fill = '#fc8961', alpha = 0.7) +
-    geom_line(aes(x = H, y = CV), col = '#000004', linewidth = 1.1, linetype = 'dashed') + 
-    xlab('\nHeight Range') +
-    ylab('Climate Variability\n') +
-    scale_x_continuous(expand = c(0,0), breaks = c(log10(10), log10(1), log10(1e-02), log10(1e-4), log10(1e-6)), labels = function(i) 10^i) +
-    scale_y_continuous(limits = c(log10(0.65+1),log10(1.13+1)), labels = function(i) format((10^i)-1, digits = 2)) +
-    scale_fill_gradientn(colours = viridis(n = 50, option = 'cividis'),
-                         guide = guide_colorbar(ticks = F, title = 'Density',
-                                                reverse = F, label = T,
-                                                na.value = "white")) +
-    theme_bw() + theme(panel.grid.major = element_blank(),
-                       panel.grid.minor = element_blank(),
-                       axis.title = element_text(size = 15, colour = 'black'),
-                       axis.text.x = element_text(size = 15, colour = "black"), 
-                       axis.text.y = element_text(size = 15, colour = "black"),
-                       panel.border = element_blank()) +
-    theme(axis.line = element_line(color = 'black')))
-
-# Fractal Dimension
-(CVDplot <- ggplot(DCV) +
-    geom_ribbon(aes(x = D, ymin = Lower, ymax = Upper), fill = '#fc8961', alpha = 0.5) +
-    geom_line(aes(x = D, y = CV), col = '#000004', linewidth = 1.1, linetype = 'dashed') + 
-    xlab('\nFractal Dimension') +
-    ylab('Climate Variability\n') +
-    scale_x_continuous(expand = c(0,0)) +
-    scale_y_continuous(limits = c(log10(0.6+1),log10(1.13+1)), labels = function(i) format((10^i)-1, digits = 2)) +
-    scale_fill_gradientn(colours = viridis(n = 50, option = 'cividis'),
-                         guide = guide_colorbar(ticks = F, title = 'Density',
-                                                reverse = F, label = T,
-                                                na.value = "white")) +
-    theme_bw() + theme(panel.grid.major = element_blank(),
-                       panel.grid.minor = element_blank(),
-                       axis.title = element_text(size = 15, colour = 'black'),
-                       axis.text.x = element_text(size = 15, colour = "black"), 
-                       axis.text.y = element_text(size = 15, colour = "black"),
-                       panel.border = element_blank()) +
-    theme(axis.line = element_line(color = 'black')))
 
 # ----------------------------------------------------- End of Code ---------------------------------
