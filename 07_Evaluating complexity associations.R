@@ -26,9 +26,9 @@ MCbrm <- function(dat, n, measure) {
   
   # Run Bayesian regression model for each pairwise combination
   if(measure == 'PD'){
-    mod1 <- quiet(qbrms(formula = PD2 ~ H2 + Lat + Lon, family = gamma(), data = PDdat))
-    mod2 <- quiet(qbrms(formula = PD2 ~ R2 + Lat + Lon, family = gamma(), data = PDdat))
-    mod3 <- quiet(qbrms(formula = PD2 ~ D + Lat + Lon, family = gamma(), data = PDdat))
+    mod1 <- quiet(qbrms(formula = PD2 ~ H2 + Lat + Lon, family = gaussian(), data = PDdat))
+    mod2 <- quiet(qbrms(formula = PD2 ~ R2 + Lat + Lon, family = gaussian(), data = PDdat))
+    mod3 <- quiet(qbrms(formula = PD2 ~ D + Lat + Lon, family = gaussian(), data = PDdat))
   }
   if(measure == 'GD'){
     mod1 <- quiet(qbrms(formula = H2 ~ G + Lon + Lat, family = gaussian(), data = TmpData))
@@ -339,43 +339,48 @@ PDlist <- lapply(1:iter, function(i) { print(i)
 saveRDS(PDlist, file = paste0(FilePath, "PDlist.rds")) # checkpoint
 
 # Extract R squared statistics
-H_R <- quiet(ci(unlist(lapply(PDlist,'[[', 'H_R'))))
-R_R <- quiet(ci(unlist(lapply(PDlist,'[[', 'R_R'))))
-D_R <- quiet(ci(unlist(lapply(PDlist,'[[', 'D_R'))))
-
-#Extract probability of zero coefficients
-coefR <- quiet(as.data.frame(t(apply(sapply(PDlist, '[[', 'R_hu'), 1, ci))))
-coefH <- quiet(as.data.frame(t(apply(sapply(PDlist, '[[', 'H_hu'), 1, ci))))
-coefD <- quiet(as.data.frame(t(apply(sapply(PDlist, '[[', 'D_hu'), 1, ci))))
-# Compute mean and variance bounds in each modeled relationship (transform to probability of >0 )
-Rvec <- seq(-13.7,0.8, 0.01); Dvec <- seq(2,3, 0.01); Hvec <- seq(-7,1.2, 0.01)
-R_hu <- data.frame(R = Rvec, Mean = 1-(exp(coefR[1,1]+coefR[2,1]*Rvec)), Lower = 1-(exp(coefR[1,2]+coefR[2,2]*Rvec)), Upper = 1-(exp(coefR[1,3]+coefR[2,3]*Rvec)))
-D_hu <- data.frame(D = Dvec, Mean = 1-(exp(coefD[1,1]+coefD[2,1]*Dvec)), Lower = 1-(exp(coefD[1,2]+coefD[2,2]*Dvec)), Upper = 1-(exp(coefD[1,3]+coefD[2,3]*Dvec)))
-H_hu <- data.frame(H = Hvec, Mean = 1-(exp(coefH[1,1]+coefH[2,1]*Hvec)), Lower = 1-(exp(coefH[1,2]+coefH[2,2]*Hvec)), Upper = 1-(exp(coefH[1,3]+coefH[2,3]*Hvec)))
+(PDR_R <- CI95(unlist(lapply(PDlist,'[[', 'R_R'))))
+(PDD_R <- CI95(unlist(lapply(PDlist,'[[', 'D_R'))))
+(PDH_R <- CI95(unlist(lapply(PDlist,'[[', 'H_R'))))
 
 # Extract predicted relationships for plotting
-RPD <- quiet(as.data.frame(t(apply(sapply(PDlist, '[[', 'R'), 1, ci)))); RPD$R <- Rvec; names(RPD) <- c('PD','Lower','Upper','SE','R') # Rugosity
-DPD <- quiet(as.data.frame(t(apply(sapply(PDlist, '[[', 'D'), 1, ci)))); DPD$D <- Dvec; names(DPD) <- c('PD','Lower','Upper','SE','D') # Fractal Dimension
-HPD <- quiet(as.data.frame(t(apply(sapply(PDlist, '[[', 'H'), 1, ci)))); HPD$H <- Hvec; names(HPD) <- c('PD','Lower','Upper','SE','H') # Height Range
+RPD <- do.call(rbind, lapply(PDlist, '[[', 'R')) %>% arrange(R2); names(RPD) <- c('R','PD','Lower','Upper') # Rugosity and Height Range
+DPD <- do.call(rbind, lapply(PDlist, '[[', 'D')) %>% arrange(D); names(DPD) <- c('D','PD','Lower','Upper') # Fractal Dimension and Height Range
+HPD <- do.call(rbind, lapply(PDlist, '[[', 'H')) %>% arrange(H2); names(HPD) <- c('H','PD','Lower','Upper') # Fractal Dimension and Rugosity
+
+#Extract probability of zero coefficients
+coefR <- data.frame(Intercept = CI95(sapply(PDlist,'[[', 'R_hu')[1,]), b = CI95(sapply(PDlist,'[[', 'R_hu')[2,]))
+coefH <- data.frame(Intercept = CI95(sapply(PDlist,'[[', 'H_hu')[1,]), b = CI95(sapply(PDlist,'[[', 'H_hu')[2,]))
+coefD <- data.frame(Intercept = CI95(sapply(PDlist,'[[', 'D_hu')[1,]), b = CI95(sapply(PDlist,'[[', 'D_hu')[2,]))
+# Compute mean and variance bounds in each modeled relationship (transform to probability of >0 )
+Rvec <- seq(min(RPD$R),max(RPD$R), 0.01); Dvec <- seq(min(DPD$D),max(DPD$D), 0.01); Hvec <- seq(min(HPD$H),max(HPD$H), 0.01)
+R_hu <- data.frame(R = Rvec, Mean = 1-(exp(coefR[1,1] + coefR[1,2]*Rvec)), Lower = 1-(exp(coefR[2,1] + coefR[2,2]*Rvec)), Upper = 1-(exp(coefR[3,1] + coefR[3,2]*Rvec)))
+D_hu <- data.frame(D = Dvec, Mean = 1-(exp(coefD[1,1] + coefD[1,2]*Dvec)), Lower = 1-(exp(coefD[2,1] + coefD[2,2]*Dvec)), Upper = 1-(exp(coefD[3,1] + coefD[3,2]*Dvec)))
+H_hu <- data.frame(H = Hvec, Mean = 1-(exp(coefH[1,1] + coefH[1,2]*Hvec)), Lower = 1-(exp(coefH[2,1] + coefH[2,2]*Hvec)), Upper = 1-(exp(coefH[3,1] + coefH[3,2]*Hvec)))
 
 # Plot modeled relationships
 # Rugosity
+# determine smoothed relationships
+RPD$LowerSmooth <- predict(loess(Lower ~ R, data = RPD), RPD$R)
+RPD$UpperSmooth <- predict(loess(Upper ~ R, data = RPD), RPD$R)
+RPD$MeanSmooth <- predict(loess(PD ~ R, data = RPD), RPD$R)
 # determine axis scaling factor
-dR <- max(RPD$Upper)/max(R_hu$Mean)
+dR <- max(RPD$UpperSmooth)/max(R_hu$Mean)
 # generate plot
 ggplot(data = RPD) +
-  geom_ribbon(aes(x = R, ymin = Lower, ymax = Upper), fill = '#0000FF', alpha = 0.2) +
-  geom_line(aes(x = R, y = PD), col = '#000099', linewidth = 1.1) +
+  geom_ribbon(aes(x = R, ymin = LowerSmooth, ymax = UpperSmooth), fill = '#0000FF', alpha = 0.2) +
+  geom_line(aes(x = R, y = MeanSmooth), col = '#000099', linewidth = 2) +
   geom_ribbon(aes(x = R, ymin = Lower*dR, ymax = Upper*dR), fill = '#F90707', alpha = 0.2, data = R_hu) +
   geom_line(aes(x = R, y = Mean*dR), col = '#A80000', linewidth = 1.1, data = R_hu) +
   xlab(NULL) +
   scale_x_continuous(expand = c(0,0), breaks = c(log10(1), log10(1e-05), log10(1e-10)), labels = function(i) 10^i) +
   scale_y_continuous(name = NULL,
-                     labels = function(i) {format(i, digits = 2, scientific = FALSE)},
+                     labels = function(i) {format(i, digits = 4, scientific = FALSE)},
                      sec.axis = sec_axis(~./dR,
                                          name = NULL,
                                          labels = function(i) round(i, 3))) +
   theme_bw() + theme(panel.grid.major = element_blank(),
+                     plot.margin = margin(t = 12, l = 5, b = 5, r = 5),
                      panel.grid.minor = element_blank(),
                      axis.title = element_text(size = 15, colour = 'black'),
                      axis.text.x = element_text(size = 30, colour = "black"), 
@@ -384,22 +389,29 @@ ggplot(data = RPD) +
   theme(axis.line = element_line(color = 'black'))
 
 # Fractal Dimension
-dD <- max(DPD$Upper)/max(D_hu$Mean)
+# determine smoothed relationships
+DPD$LowerSmooth <- predict(loess(Lower ~ D, data = DPD), DPD$D)
+DPD$UpperSmooth <- predict(loess(Upper ~ D, data = DPD), DPD$D)
+DPD$MeanSmooth <- predict(loess(PD ~ D, data = DPD), DPD$D)
+# determine axis scaling factor
+dD <- max(DPD$UpperSmooth)/max(D_hu$Mean)
 # generate plot
 ggplot(data = DPD) +
   geom_ribbon(aes(x = D, ymin = Lower*dD, ymax = Upper*dD), fill = '#F90707', alpha = 0.2, data = D_hu) +
   geom_line(aes(x = D, y = Mean*dD), col = '#A80000', linewidth = 1.1, data = D_hu) +
-  geom_ribbon(aes(x = D, ymin = Lower, ymax = Upper), fill = '#0000FF', alpha = 0.2) +
-  geom_line(aes(x = D, y = PD), col = '#000099', linewidth = 1.1) +
+  geom_ribbon(aes(x = D, ymin = LowerSmooth, ymax = UpperSmooth), fill = '#0000FF', alpha = 0.2) +
+  geom_line(aes(x = D, y = MeanSmooth), col = '#000099', linewidth = 1.1) +
   xlab(NULL) +
   scale_y_continuous(name = NULL,
                      labels = function(i) {format(i, digits = 2, scientific = FALSE)},
                      sec.axis = sec_axis(~./dD,
                                          name = NULL,
                                          labels = function(i) round(i, 3))) +
-  scale_x_continuous(expand = c(0,0)) +
+  scale_x_continuous(expand = c(0,0), labels = function(i) {format(i, digits = 3, scientific = FALSE)},
+                     breaks = c(2.1, 2.45, 2.8)) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
+                     plot.margin = margin(t = 12, l = 5, b = 5, r = 5),
                      axis.title = element_text(size = 15, colour = 'black'),
                      axis.text.x = element_text(size = 30, colour = "black"), 
                      axis.text.y = element_text(size = 30, colour = "black"),
@@ -407,11 +419,16 @@ ggplot(data = DPD) +
   theme(axis.line = element_line(color = 'black'))
 
 # Height Range
-dH <- max(HPD$Upper)/max(H_hu$Mean)
+# determine smoothed relationships
+HPD$LowerSmooth <- predict(loess(Lower ~ H, data = HPD), HPD$H)
+HPD$UpperSmooth <- predict(loess(Upper ~ H, data = HPD), HPD$H)
+HPD$MeanSmooth <- predict(loess(PD ~ H, data = HPD), HPD$H)
+# determine axis scaling factor
+dH <- max(HPD$UpperSmooth)/max(H_hu$Mean)
 # generate plot
 ggplot(data = HPD) +
-  geom_ribbon(aes(x = H, ymin = Lower, ymax = Upper), fill = '#0000FF', alpha = 0.2) +
-  geom_line(aes(x = H, y = PD), col = '#000099', linewidth = 1.1) +
+  geom_ribbon(aes(x = H, ymin = LowerSmooth, ymax = UpperSmooth), fill = '#0000FF', alpha = 0.2) +
+  geom_line(aes(x = H, y = MeanSmooth), col = '#000099', linewidth = 1.1) +
   geom_ribbon(aes(x = H, ymin = Lower*dH, ymax = Upper*dH), fill = '#F90707', alpha = 0.2, data = H_hu) +
   geom_line(aes(x = H, y = Mean*dH), col = '#A80000', linewidth = 1.1, data = H_hu) +
   xlab(NULL) +
@@ -423,6 +440,7 @@ ggplot(data = HPD) +
                                          labels = function(i) round(i, 3))) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
+                     plot.margin = margin(t = 12, l = 5, b = 5, r = 5),
                      axis.title = element_text(size = 15, colour = 'black'),
                      axis.text.x = element_text(size = 30, colour = "black"), 
                      axis.text.y = element_text(size = 30, colour = "black"),
