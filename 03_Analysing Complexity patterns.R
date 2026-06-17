@@ -338,15 +338,30 @@ DR <- do.call(rbind, lapply(modList, '[[', 'DR')) %>% arrange(D); names(DR) <- c
 
 # Add details to plots
 # Rugosity and Height Range
+# determine smoothed relationships
+RH$LowerSmooth <- predict(loess(Lower ~ H2, data = RH), RH$H2)
+RH$UpperSmooth <- predict(loess(Upper ~ H2, data = RH), RH$H2)
+RH$MeanSmooth <- predict(loess(R2 ~ H2, data = RH), RH$H2)
 RH_plot +
-  geom_smooth(aes(x = H2, y = R2), se = F, col = 'red', linetype = 'solid', linewidth = 2, data = RH, inherit.aes = FALSE)
-  
+  geom_ribbon(aes(x = H2, ymin = LowerSmooth, ymax = UpperSmooth), fill = 'red', alpha = 0.2, data = RH, inherit.aes = FALSE) +
+  geom_line(aes(x = H2, y = MeanSmooth), col = 'red', linewidth = 2, data = RH, inherit.aes = FALSE)
+
 # Fractal Dimension and Height range
+# determine smoothed relationships
+DH$LowerSmooth <- predict(loess(Lower ~ D, data = DH), DH$D)
+DH$UpperSmooth <- predict(loess(Upper ~ D, data = DH), DH$D)
+DH$MeanSmooth <- predict(loess(H2 ~ D, data = DH), DH$D)
 DH_plot +
-  geom_smooth(aes(x = D, y = H2), se = F, col = 'red', linetype = 'solid', linewidth = 2, data = DH, inherit.aes = FALSE)
+  geom_ribbon(aes(x = D, ymin = LowerSmooth, ymax = UpperSmooth), fill = 'red', alpha = 0.2, data = DH, inherit.aes = FALSE) +
+  geom_line(aes(x = D, y = MeanSmooth), col = 'red', linewidth = 2, data = DH, inherit.aes = FALSE)
 
 # Fractal Dimension and Height Range
+# determine smoothed relationships
+DR$LowerSmooth <- predict(loess(Lower ~ D, data = DR), DR$D)
+DR$UpperSmooth <- predict(loess(Upper ~ D, data = DR), DR$D)
+DR$MeanSmooth <- predict(loess(R2 ~ D, data = DR), DR$D)
 DR_plot +
-  geom_smooth(aes(x = D, y = R2), se = F, col = 'red', linetype = 'solid', linewidth = 2, data = DR, inherit.aes = FALSE)
+  geom_ribbon(aes(x = D, ymin = LowerSmooth, ymax = UpperSmooth), fill = 'red', alpha = 0.2, data = DR, inherit.aes = FALSE) +
+  geom_line(aes(x = D, y = MeanSmooth), col = 'red', linewidth = 2, data = DR, inherit.aes = FALSE)
 
 # ----------------------------------------------------- End of Code ---------------------------------

@@ -8,6 +8,17 @@
 # Set random number seed
 set.seed(458967)
 
+# Load required complexity rasters
+DRast <- rast(paste0(FilePath, 'GlobalFractalDimension.tif'))
+RRast <- rast(paste0(FilePath, 'GlobalRugosity.tif'))
+HRast <- rast(paste0(FilePath, 'GlobalHeightRange.tif'))
+# Apply data transformation to rugosity and height range values
+RRast <- log10(RRast)
+HRast <- log10(HRast)
+# Remove error values
+RRast[is.infinite(RRast)] <- NA
+HRast[is.infinite(HRast)] <- NA
+
 ###############################
 # STEP 1: Identify Classification Categories (only needed if first time running script)
 ###############################
@@ -65,98 +76,65 @@ if(FirstRun == TRUE) {
     RastSelect <- rast(fileNames[ii])
     # Remove minor occurrences of selected ecosystem
     try(RastSelect[RastSelect != 1] <- NA)
-    # re-load required complexity rasters
-    tmpD <- rast(paste0(FilePath, 'GlobalFractalDimension.tif'))
-    tmpR <- rast(paste0(FilePath, 'GlobalRugosity.tif'))
-    tmpH <- rast(paste0(FilePath, 'GlobalHeightRange.tif'))
-    # Ensure rasters align
-    try(RastSelect <- resample(RastSelect, tmpR))
-    
-    # Isolate corresponding complexity values
-    try(tmpD[is.na(RastSelect)] <- NA)
-    try(tmpR[is.na(RastSelect)] <- NA)
-    try(tmpH[is.na(RastSelect)] <- NA)
-    try(tmpR <- log10(tmpR)) # Apply data transformation to rugosity and height range values
-    try(tmpH <- log10(tmpH))
-    try(tmpR[is.infinite(tmpR)] <- NA)
-    try(tmpH[is.infinite(tmpH)] <- NA)
-    
+    # Ensure ecosystem raster aligns with complexity rasters
+    try(RastSelect <- resample(RastSelect, RRast))
+    # Vectorise ecosystem distribution
+    try(RastSelect <- as.polygons(RastSelect))
     # Extract distribution of complexity values
-    try(EcoTypesD[[ii]] <- na.omit(values(tmpD)))
-    try(EcoTypesR[[ii]] <- na.omit(values(tmpR)))
-    try(EcoTypesH[[ii]] <- na.omit(values(tmpH)))
+    try(EcoTypesD[[ii]] <- na.omit(extract(DRast, RastSelect)[,2]))
+    try(EcoTypesR[[ii]] <- na.omit(extract(RRast, RastSelect)[,2]))
+    try(EcoTypesH[[ii]] <- na.omit(extract(HRast, RastSelect)[,2]))
   }
-  
-  ### Worked up to here -----------------------------
 
   # match up EFG codes to corresponding ecosystem names
+  write.csv(EcoMetadata, paste0(FilePath, 'EFGcodes.csv'), row.names = F)
   EFGcodes <- read.csv(paste0(FilePath, 'EFGcodes_names.csv'))
-  EcoMetadata <- merge(EcoMetadata, EFGcodes, by = c('Realm', 'Biome', 'EFG'))
-  # remove categories with no data
-  EcoTypesDensityD <- EcoTypesDensityD[complete.cases(EcoTypesDF)] 
-  EcoTypesDensityR <- EcoTypesDensityR[complete.cases(EcoTypesDF)] 
-  EcoTypesDF <- EcoTypesDF[complete.cases(EcoTypesDF),] 
+  EcoMetadata <- merge(EcoMetadata, EFGcodes, by = c('Realm', 'Biome', 'EFG', 'Realm_Name'))
   
   ### 2. Land Use types
   
-  for(ii in 1:length(CatNames)) { # working through each land use category
+  for(ii in 1:length(LandUseMetadata)) { # working through each land use category
     # progress read out
     print(ii)
     
     # Identify scenario codes associated with the selected category
-    if(CatNames[ii] == 'Cropland'){ CatCode <- c(10,11,12,20) }
-    if(CatNames[ii] == 'Mosaic Vegetation/Cropland'){ CatCode <-  c(30,40) }
-    if(CatNames[ii] == 'Tree Cover (Broadleaved)'){ CatCode <-  c(50:62) }
-    if(CatNames[ii] == 'Tree Cover (Needleleaved)'){ CatCode <-  c(70:82) }
-    if(CatNames[ii] == 'Mixed Tree Cover'){ CatCode <-  c(90) }
-    if(CatNames[ii] == 'Mosaic Vegetation'){ CatCode <-  c(100:110) }
-    if(CatNames[ii] == 'Shrubland'){ CatCode <-  c(120:122) }
-    if(CatNames[ii] == 'Grassland'){ CatCode <-  c(130) }
-    if(CatNames[ii] == 'Lichens & Mosses'){ CatCode <-  c(140) }
-    if(CatNames[ii] == 'Sparse Vegetation'){ CatCode <-  c(150:153) }
-    if(CatNames[ii] == 'Wetlands'){ CatCode <-  c(160:180) }
-    if(CatNames[ii] == 'Urban'){ CatCode <-  c(190) }
-    if(CatNames[ii] == 'Bare substrate'){ CatCode <-  c(200:202) }
-    if(CatNames[ii] == 'Permenant Snow & Ice'){ CatCode <-  c(220) }
+    if(LandUseMetadata[ii] == 'Cropland'){ CatCode <- c(10,11,12,20) }
+    if(LandUseMetadata[ii] == 'Mosaic Vegetation/Cropland'){ CatCode <-  c(30,40) }
+    if(LandUseMetadata[ii] == 'Tree Cover (Broadleaved)'){ CatCode <-  c(50:62) }
+    if(LandUseMetadata[ii] == 'Tree Cover (Needleleaved)'){ CatCode <-  c(70:82) }
+    if(LandUseMetadata[ii] == 'Mixed Tree Cover'){ CatCode <-  c(90) }
+    if(LandUseMetadata[ii] == 'Mosaic Vegetation'){ CatCode <-  c(100:110) }
+    if(LandUseMetadata[ii] == 'Shrubland'){ CatCode <-  c(120:122) }
+    if(LandUseMetadata[ii] == 'Grassland'){ CatCode <-  c(130) }
+    if(LandUseMetadata[ii] == 'Lichens & Mosses'){ CatCode <-  c(140) }
+    if(LandUseMetadata[ii] == 'Sparse Vegetation'){ CatCode <-  c(150:153) }
+    if(LandUseMetadata[ii] == 'Wetlands'){ CatCode <-  c(160:180) }
+    if(LandUseMetadata[ii] == 'Urban'){ CatCode <-  c(190) }
+    if(LandUseMetadata[ii] == 'Bare substrate'){ CatCode <-  c(200:202) }
+    if(LandUseMetadata[ii] == 'Permenant Snow & Ice'){ CatCode <-  c(220) }
     
     # Duplicate Land use raster
     RastSelect <- LandUse
     # Isolate selected Land Use scenario
     RastSelect[!(values(RastSelect) %in% CatCode)] <- NA 
-    # re-load required complexity rasters (multicore processing can't call the files from the global environment)
-    tmpD <- rast(paste0(FilePath, 'GlobalFractalDimension.tif'))
-    tmpR <- rast(paste0(FilePath, 'GlobalRugosity.tif'))
-    # Ensure rasters align
+    # Ensure land use and complexity rasters align
     ext(RastSelect) <- ext(tmpD)
-    
-    # Isolate corresponding complexity values
-    tmpD[is.na(RastSelect)] <- NA
-    tmpR[is.na(RastSelect)] <- NA
-    
-    # Extract values
-    LU_df$Dmax[ii] <- max(values(tmpD),na.rm = TRUE)
-    LU_df$Dmin[ii] <- min(values(tmpD),na.rm = TRUE)
-    LU_df$Dmean[ii] <- mean(values(tmpD),na.rm = TRUE)
-    LU_df$Dsigma[ii] <- sd(values(tmpD),na.rm = TRUE)
-    LU_df$Rmax[ii] <- max(values(tmpR),na.rm = TRUE)
-    LU_df$Rmin[ii] <- min(values(tmpR),na.rm = TRUE)
-    LU_df$Rmean[ii] <- mean(values(tmpR),na.rm = TRUE)
-    LU_df$Rsigma[ii] <- sd(values(tmpR),na.rm = TRUE)
-    
+    # Vectorise lselected land use distribution
+    try(RastSelect <- as.polygons(RastSelect))
     # Extract distribution of complexity values
-    try(LUDensityD[[ii]] <- density(na.omit(values(tmpD))))
-    tmpR <- log10(tmpR) # Apply data transformation
-    tmpR[is.infinite(tmpR)] <- NA
-    try(LUDensityR[[ii]] <- density(na.omit(values(tmpR))))
+    try(LandUseD[[ii]] <- na.omit(extract(DRast, RastSelect)[,2]))
+    try(LandUseR[[ii]] <- na.omit(extract(RRast, RastSelect)[,2]))
+    try(LandUseH[[ii]] <- na.omit(extract(HRast, RastSelect)[,2]))
   }
   
   # Save files (data checkpoint)
   # Ecosystem types
-  write.csv(EcoTypesDF, paste0(FilePath, 'EcosystemComplexity.csv'), row.names = FALSE)
-  saveRDS(EcoTypesDensityD, paste0(FilePath, 'EcoTypesDensityD.RData'))
-  saveRDS(EcoTypesDensityR, paste0(FilePath, 'EcoTypesDensityR.RData'))
+  write.csv(EcoMetadata, paste0(FilePath, 'EcosystemComplexity.csv'), row.names = FALSE)
+  saveRDS(EcoTypesD, paste0(FilePath, 'EcoTypesD.RData'))
+  saveRDS(EcoTypesR, paste0(FilePath, 'EcoTypesR.RData'))
+  saveRDS(EcoTypesH, paste0(FilePath, 'EcoTypesH.RData'))
   # Land Use types
-  write.csv(LU_df, paste0(FilePath, 'LandUseComplexity.csv'), row.names = FALSE)
-  saveRDS(LUDensityD, paste0(FilePath, 'LandUseDensityD.RData'))
-  saveRDS(LUDensityR, paste0(FilePath, 'LandUseDensityR.RData'))
+  saveRDS(LandUseH, paste0(FilePath, 'LandUseH.RData'))
+  saveRDS(LandUseD, paste0(FilePath, 'LandUseD.RData'))
+  saveRDS(LandUseR, paste0(FilePath, 'LandUseR.RData'))
 }

@@ -57,7 +57,6 @@ FilePath <- '/MAIN_FILE_DIRECTORY/'
 # large quantities of raw data downloaded from external sources.
 TilePath <- '/Temporary_File_Directory_1/' # directory for storing temporary DEM tiles during complexity indices computation
 fileSave <- '/Temporary_File_Directory_2/' # directory for saving interim .csv files during complexity indices computation
-# 04_visualising complexity for storing ecosystem typology maps.
 EcoTypes <- '/Raw_File_Directory_1/' # initial storage for ecosystem typology maps downloaded from the following repository: 
                                      # Keith, D. et al. (2020). Indicative distribution maps for Ecosystem Functional Groups - Level 3 of IUCN Global Ecosystem Typology (Version 2.1.1) [Data set]. Zenodo. DOI: 10.5281/zenodo.3546513
 ClimatePath <- '/Raw_File_Directory_2/' # Raw climate data (original data sources can be found in the manuscript associated with these analyses scripts)

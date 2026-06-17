@@ -290,14 +290,29 @@ HG <- do.call(rbind, lapply(GeoList, '[[', 'H')) %>% arrange(G); names(HG) <- c(
 
 # Add details to plots
 # Rugosity
+# determine smoothed relationships
+RG$LowerSmooth <- predict(loess(Lower ~ G, data = RG), RG$G)
+RG$UpperSmooth <- predict(loess(Upper ~ G, data = RG), RG$G)
+RG$MeanSmooth <- predict(loess(R2 ~ G, data = RG), RG$G)
 GRplot + 
-  geom_smooth(aes(x = G, y = R2), se = F, col = 'black', linetype = 'solid', linewidth = 2, data = RG, inherit.aes = FALSE)
+  geom_ribbon(aes(x = G, ymin = LowerSmooth, ymax = UpperSmooth), fill = 'black', alpha = 0.2, data = RG, inherit.aes = FALSE) +
+  geom_line(aes(x = G, y = MeanSmooth), col = 'black', linewidth = 2, data = RG, inherit.aes = FALSE)
 # Fractal Dimension
+# determine smoothed relationships
+DG$LowerSmooth <- predict(loess(Lower ~ G, data = DG), DG$G)
+DG$UpperSmooth <- predict(loess(Upper ~ G, data = DG), DG$G)
+DG$MeanSmooth <- predict(loess(D ~ G, data = DG), DG$G)
 GDplot + 
-  geom_smooth(aes(x = G, y = D), se = F, col = 'black', linetype = 'solid', linewidth = 2, data = DG, inherit.aes = FALSE)
+  geom_ribbon(aes(x = G, ymin = LowerSmooth, ymax = UpperSmooth), fill = 'black', alpha = 0.2, data = DG, inherit.aes = FALSE) +
+  geom_line(aes(x = G, y = MeanSmooth), col = 'black', linewidth = 2, data = DG, inherit.aes = FALSE)
 # Height Range
+# determine smoothed relationships
+HG$LowerSmooth <- predict(loess(Lower ~ G, data = HG), HG$G)
+HG$UpperSmooth <- predict(loess(Upper ~ G, data = HG), HG$G)
+HG$MeanSmooth <- predict(loess(H2 ~ G, data = HG), HG$G)
 GHplot + 
-  geom_smooth(aes(x = G, y = H2), se = F, col = 'black', linetype = 'solid', linewidth = 2, data = HG, inherit.aes = FALSE)
+  geom_ribbon(aes(x = G, ymin = LowerSmooth, ymax = UpperSmooth), fill = 'black', alpha = 0.2, data = HG, inherit.aes = FALSE) +
+  geom_line(aes(x = G, y = MeanSmooth), col = 'black', linewidth = 2, data = HG, inherit.aes = FALSE)
 
 ######################################
 # STEP 3: Population density and Geometric complexity
@@ -400,7 +415,7 @@ ggplot(data = DPD) +
   geom_ribbon(aes(x = D, ymin = Lower*dD, ymax = Upper*dD), fill = '#F90707', alpha = 0.2, data = D_hu) +
   geom_line(aes(x = D, y = Mean*dD), col = '#A80000', linewidth = 1.1, data = D_hu) +
   geom_ribbon(aes(x = D, ymin = LowerSmooth, ymax = UpperSmooth), fill = '#0000FF', alpha = 0.2) +
-  geom_line(aes(x = D, y = MeanSmooth), col = '#000099', linewidth = 1.1) +
+  geom_line(aes(x = D, y = MeanSmooth), col = '#000099', linewidth = 2) +
   xlab(NULL) +
   scale_y_continuous(name = NULL,
                      labels = function(i) {format(i, digits = 2, scientific = FALSE)},
@@ -428,7 +443,7 @@ dH <- max(HPD$UpperSmooth)/max(H_hu$Mean)
 # generate plot
 ggplot(data = HPD) +
   geom_ribbon(aes(x = H, ymin = LowerSmooth, ymax = UpperSmooth), fill = '#0000FF', alpha = 0.2) +
-  geom_line(aes(x = H, y = MeanSmooth), col = '#000099', linewidth = 1.1) +
+  geom_line(aes(x = H, y = MeanSmooth), col = '#000099', linewidth = 2) +
   geom_ribbon(aes(x = H, ymin = Lower*dH, ymax = Upper*dH), fill = '#F90707', alpha = 0.2, data = H_hu) +
   geom_line(aes(x = H, y = Mean*dH), col = '#A80000', linewidth = 1.1, data = H_hu) +
   xlab(NULL) +
