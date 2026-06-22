@@ -284,9 +284,9 @@ saveRDS(GeoList, paste0(FilePath, "GeoList.rds")) # save as a checkpoint
 (H_R <- CI95(unlist(lapply(GeoList,'[[', 'H_R'))))
 
 # Extract predicted relationships for plotting
-RG <- do.call(rbind, lapply(GeoList, '[[', 'R')) %>% arrange(G); names(RG) <- c('G','R2','Lower','Upper') # Rugosity and Height Range
-DG <- do.call(rbind, lapply(GeoList, '[[', 'D')) %>% arrange(G); names(DG) <- c('G','D','Lower','Upper') # Fractal Dimension and Height Range
-HG <- do.call(rbind, lapply(GeoList, '[[', 'H')) %>% arrange(G); names(HG) <- c('G','H2','Lower','Upper') # Fractal Dimension and Rugosity
+RG <- do.call(rbind, lapply(GeoList, '[[', 'R')) %>% arrange(G); names(RG) <- c('G','R2','Lower','Upper') 
+DG <- do.call(rbind, lapply(GeoList, '[[', 'D')) %>% arrange(G); names(DG) <- c('G','D','Lower','Upper') 
+HG <- do.call(rbind, lapply(GeoList, '[[', 'H')) %>% arrange(G); names(HG) <- c('G','H2','Lower','Upper')
 
 # Add details to plots
 # Rugosity
@@ -359,9 +359,9 @@ saveRDS(PDlist, file = paste0(FilePath, "PDlist.rds")) # checkpoint
 (PDH_R <- CI95(unlist(lapply(PDlist,'[[', 'H_R'))))
 
 # Extract predicted relationships for plotting
-RPD <- do.call(rbind, lapply(PDlist, '[[', 'R')) %>% arrange(R2); names(RPD) <- c('R','PD','Lower','Upper') # Rugosity and Height Range
-DPD <- do.call(rbind, lapply(PDlist, '[[', 'D')) %>% arrange(D); names(DPD) <- c('D','PD','Lower','Upper') # Fractal Dimension and Height Range
-HPD <- do.call(rbind, lapply(PDlist, '[[', 'H')) %>% arrange(H2); names(HPD) <- c('H','PD','Lower','Upper') # Fractal Dimension and Rugosity
+RPD <- do.call(rbind, lapply(PDlist, '[[', 'R')) %>% arrange(R2); names(RPD) <- c('R','PD','Lower','Upper') 
+DPD <- do.call(rbind, lapply(PDlist, '[[', 'D')) %>% arrange(D); names(DPD) <- c('D','PD','Lower','Upper') 
+HPD <- do.call(rbind, lapply(PDlist, '[[', 'H')) %>% arrange(H2); names(HPD) <- c('H','PD','Lower','Upper')
 
 #Extract probability of zero coefficients
 coefR <- data.frame(Intercept = CI95(sapply(PDlist,'[[', 'R_hu')[1,]), b = CI95(sapply(PDlist,'[[', 'R_hu')[2,]))

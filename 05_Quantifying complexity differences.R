@@ -1,9 +1,12 @@
-# This script is for statistically testing the similarities and differences between the structural complexity regimes
-# associated with differing ecosystem types and land use scenarios
+# This script is for statistically testing and visualising global patterns in geometric complexity 
+# and how different ecosystem types and land use scenarios align with these measures
+# The ecosystem classification used follows the typology outlined in Keith et al. (2022) Nature.
+# The Land Use classifications have been derived from the Land Cover 2020 data product from the Copernicus Climate Change service
 
 # Date last modified: June 2026
 # Primary Author: James Cant
 # -----------------------------------------------------------------------------------------
+
 
 # Set random number seed
 set.seed(458967)
@@ -12,18 +15,52 @@ set.seed(458967)
 DRast <- rast(paste0(FilePath, 'GlobalFractalDimension.tif'))
 RRast <- rast(paste0(FilePath, 'GlobalRugosity.tif'))
 HRast <- rast(paste0(FilePath, 'GlobalHeightRange.tif'))
-# Apply data transformation to rugosity and height range values
-RRast <- log10(RRast)
-HRast <- log10(HRast)
-# Remove error values
-RRast[is.infinite(RRast)] <- NA
-HRast[is.infinite(HRast)] <- NA
 
 ###############################
-# STEP 1: Identify Classification Categories (only needed if first time running script)
+# STEP 1: Plot global patterns
 ###############################
+
+# plot maps
+# Fractal Dimension
+plot(DRast, col = fish(50, direction = -1, option = 'Variola_louti'),
+     buffer = FALSE,
+     plg = list(x = 'bottom', at = c(2,3), digits = 1, tic = 'none', size = c(1,2.5)),
+     box = FALSE, 
+     axes = FALSE)
+
+# Rugosity
+plot(log10(RRast), col = fish(50, direction = 1, option = 'Ostracion_whitleyi'),
+     buffer = FALSE, 
+     plg = list(x = 'bottom', at = c(-12,0), tic = 'none', size = c(1,2.5)),
+     box = FALSE, 
+     axes = FALSE)
+
+# Height Range
+plot(log10(HRast), col = fish(50, direction = 1, option = 'Acanthurus_leucosternon'), 
+     buffer = FALSE, 
+     plg = list(x = 'bottom', at = c(-5,0), tic = 'none', size = c(1,2.5)),
+     box = FALSE, 
+     axes = FALSE)
+
+###############################
+# STEP 2: Extract complexities for ecosystem and land Use types
+###############################
+
+# Extract typology maps from downloaded typology .tar file
+if(FirstRun == TRUE) { untar(paste0(FilePath, "all-maps-raster-geotiff.tar.bz2"), exdir = EcoTypes) }
+# only needed once to unzip downloaded maps.
+# Note: once these ecosystem typology maps have been extracted then need to be reprojected to match the mollweide projection, resolution, and extent of the complexity rasters.
+# This process is faster if done in batch within QGIS, first using the warp function to change the desired resolution and CRS of the IUCN maps before clipping these reprojected maps to the same extent as the complexity maps.
+# The reprojected rasters are then saved into the 'Ecotypes' folder ahead of the processing below.
 
 if(FirstRun == TRUE) {
+  # Apply data transformation to rugosity and height range values
+  RRast <- log10(RRast)
+  HRast <- log10(HRast)
+  # Remove error values
+  RRast[is.infinite(RRast)] <- NA
+  HRast[is.infinite(HRast)] <- NA
+  
   ### Ecosystem types ----------------------------------- 
   # List available ecosystem type maps
   fileNames <- list.files(EcoTypes, pattern = '.tif$', full.names = TRUE)
@@ -62,7 +99,7 @@ if(FirstRun == TRUE) {
   LandUseD <- LandUseR <- LandUseH <- list()
   
   ###############################
-  # STEP 4: Extract Complexities (again only needed if first time running script)
+  # STEP 3: Extract Complexities
   ###############################
   
   ### 1. Ecosystem Types
@@ -127,14 +164,165 @@ if(FirstRun == TRUE) {
     try(LandUseH[[ii]] <- na.omit(extract(HRast, RastSelect)[,2]))
   }
   
+  # Reformat complexity data
+  # Ecosystem typologies
+  EcoTypeDat <- as.data.frame(do.call(rbind, lapply(1:dim(EcoMetadata)[1], function(x){
+    # Isolate complexity measures for selected land use category
+    vecD <- as.numeric(EcoTypesD[[x]])
+    vecR <- as.numeric(EcoTypesR[[x]])
+    vecH <- as.numeric(EcoTypesH[[x]])
+    # Determine maximum vector length
+    max_length <- max(length(vecD), length(vecR), length(vecH))
+    # Set length of each vector equal to max length
+    length(vecD) <- max_length                      
+    length(vecR) <- max_length 
+    length(vecH) <- max_length
+    # Assign Land use category
+    Index <- rep(EcoMetadata$Ecosystem_Name[x], length.out = max_length)
+    # cbind the vectors together
+    return(do.call(cbind, list(Index, vecD, vecR, vecH)))
+  })))
+  names(EcoTypeDat) <- c('EcosystemType', 'D', 'R', 'H')
+  
+  # LandUse Data
+  LandUseDat <- as.data.frame(do.call(rbind, lapply(1:length(LandUseMetadata), function(x){
+    # Isolate complexity measures for selected land use category
+    vecD <- as.numeric(LandUseD[[x]])
+    vecR <- as.numeric(LandUseR[[x]])
+    vecH <- as.numeric(LandUseH[[x]])
+    # Determine maximum vector length
+    max_length <- max(length(vecD), length(vecR), length(vecH))
+    # Set length of each vector equal to max length
+    length(vecD) <- max_length                      
+    length(vecR) <- max_length 
+    length(vecH) <- max_length
+    # Assign Land use category
+    Index <- rep(LandUseMetadata[x], length.out = max_length)
+    # cbind the vectors together
+    return(do.call(cbind, list(Index, vecD, vecR, vecH)))
+  })))
+  names(LandUseDat) <- c('LandUse', 'D', 'R', 'H')
+  
+  #EcoTypeDat <- readRDS(paste0(FilePath, 'EcoTypeData.RData'))
+  #LandUseDat <- readRDS(paste0(FilePath, 'LandUseData.RData'))
+  
+  # Ensure correct variable formatting
+  EcoTypeDat$EcosystemType <- as.factor(EcoTypeDat$EcosystemType)
+  EcoTypeDat$D <- as.numeric(EcoTypeDat$D)
+  EcoTypeDat$R <- as.numeric(EcoTypeDat$R)
+  EcoTypeDat$H <- as.numeric(EcoTypeDat$H)
+  LandUseDat$LandUse <- as.factor(LandUseDat$LandUse)
+  LandUseDat$D <- as.numeric(LandUseDat$D)
+  LandUseDat$R <- as.numeric(LandUseDat$R)
+  LandUseDat$H <- as.numeric(LandUseDat$H)
+
+  # Drop complete entries 
+  EcoTypeDat <- EcoTypeDat[complete.cases(EcoTypeDat[,c('D', 'R')]),]
+  LandUseDat <- LandUseDat[complete.cases(LandUseDat[,c('D', 'R')]),]
+  
   # Save files (data checkpoint)
-  # Ecosystem types
-  write.csv(EcoMetadata, paste0(FilePath, 'EcosystemComplexity.csv'), row.names = FALSE)
-  saveRDS(EcoTypesD, paste0(FilePath, 'EcoTypesD.RData'))
-  saveRDS(EcoTypesR, paste0(FilePath, 'EcoTypesR.RData'))
-  saveRDS(EcoTypesH, paste0(FilePath, 'EcoTypesH.RData'))
-  # Land Use types
-  saveRDS(LandUseH, paste0(FilePath, 'LandUseH.RData'))
-  saveRDS(LandUseD, paste0(FilePath, 'LandUseD.RData'))
-  saveRDS(LandUseR, paste0(FilePath, 'LandUseR.RData'))
+  write_parquet(EcoTypeDat, paste0(FilePath, 'EcoTypeData.parquet'))
+  write_parquet(LandUseDat, paste0(FilePath, 'LandUseData.parquet'))
+} else {
+  # Load files
+  EcoTypeDat <- open_dataset(paste0(FilePath, 'EcoTypeData.parquet')) 
+  LandUseDat <- open_dataset(paste0(FilePath, 'LandUseData.parquet'))
 }
+
+
+###############################
+# STEP 4: Quantify and visualize complexity patterns
+#############################
+
+# Run multivariate analysis of variance (PERMANOVA)
+# Ecosystem types
+EcoDatSample <- EcoTypeDat %>%
+  group_by(EcosystemType) %>% 
+  map_batches(~ as_record_batch(sample_frac(as.data.frame(.), 0.0001))) %>%   
+  collect()                                 # Pull only this tiny slice into RAM
+
+
+library(brms)
+
+# Force brms to use cmdstanr
+options(brms.backend = "cmdstanr")
+
+# Specify the multinomial formula
+# brms treats the first level of a factor as the reference category by default
+df_subsample$outcome <- as.factor(df_subsample$outcome)
+bayesfactor(fit_multinomial, 'b_D > 0')
+fit_multinomial <- qbrm(
+  formula = EcosystemType ~ D + R,
+  data = EcoDatSample,
+  family = multinomial()
+)
+
+fit_multinomial <- brm(
+  formula = EcosystemType ~ D + R,
+  data = EcoDatSample,
+  family = categorical(),
+  iter = 2000,
+  warmup = 1000,
+  backend = "cmdstanr"
+)
+
+density_plot(fit_multinomial)
+    mod1 <- quiet(qbrms(formula = PD2 ~ H2 + Lat + Lon, family = gaussian(), data = PDdat))
+
+# Run a traditional Distance Matrix and PERMANOVA equivalents instantly
+EcoDist <- dist(EcoDatSample[, c("D", "R")])
+EcoTypesMod <- adonis2(EcoDatSample$EcosystemType ~ EcoDatSample[, c("D", "R")], data = EcoDatSample)
+print(permanova)
+
+varsEco <- cbind(D = EcoTypeDat$D, EcoTypeDat$R)
+EcoTypesMod <- manova(varsEco ~ EcosystemType, data = EcoTypeDat)
+summary(EcoTypesMod)
+# Land Use
+varsLU <- cbind(D = LandUseDat$D, R = LandUseDat$R)
+LandUseMod <- manova(varsLU ~ LandUse, data = LandUseDat)
+summary(LandUseMod)
+
+# Run post-hoc tests for location of observed statistical inference
+# This post-hoc test takes the form of a linear discriminant analysis to distil the statistical differences between groups.
+EcoTypesPostHoc <- lda(EcoTypeDat$EcosystemType ~ varsEco, CV = F)
+EcoTypesPostHoc
+LandUsePostHoc <- lda(LandUseDat$LandUse ~ varsLU, CV = F)
+LandUsePostHoc
+
+# Extract post-hoc summary statistics for plotting.
+# Ecosystem Types
+df %>% group_by(plant_var) %>%  summarise(n = n(), mean = mean(canopy_vol), sd = sd(canopy_vol))
+# Land Use
+LU_lda <- data.frame(LandUse = LandUseDat[, "LandUse"], lda = predict(LandUsePostHoc)$x)
+plotLU <- LU_lda %>% group_by(LandUse) %>% summarise(n = n(), meanLD1 = mean(lda.LD1), meanLD2 = mean(lda.LD2))
+
+# Plot centroid positions of Ecosystem and Land use types on their respective LDA planes
+## Ecosystem types
+
+
+## Land Use
+ggplot(aes(x = meanLD1, y = meanLD2), data = plotLU) + 
+  geom_point(aes(colour = LandUse), size = 6) +
+  scale_color_manual(values = magma(n = length(unique(plotLU$LandUse))),
+                     limits = c("Urban","Cropland","Mosaic Vegetation/Cropland","Mosaic Vegetation",
+                                "Grassland","Shrubland","Lichens & Mosses","Sparse Vegetation",         
+                                "Mixed Tree Cover","Tree Cover (Needleleaved)","Tree Cover (Broadleaved)",
+                                'Wetlands',"Bare substrate","Permenant Snow & Ice"),
+                     guide = guide_legend(title = 'Land Cover Type', 
+                                          reverse = F, label = T)) +
+  scale_x_continuous(labels = function(x) { format(x, digits = 2) }) +
+  scale_y_continuous(labels = function(x) { format(x, digits = 2) }) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     axis.title = element_text(size = 15, colour = 'black'),
+                     axis.text.x = element_text(size = 25, colour = "black"), axis.text.y = element_text(size = 25, colour = "black"),
+                     panel.border = element_blank(),
+                     legend.background = element_blank(),
+                     legend.box.background = element_rect(colour = 0),
+                     axis.line = element_line(color = 'black'),
+                     plot.margin = margin(15, 10, 10, 10))
+  
+
+# Extract densities of complexity distributions
