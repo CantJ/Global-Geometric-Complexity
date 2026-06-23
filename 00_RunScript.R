@@ -28,7 +28,7 @@ if(inlaSetup == TRUE) {
 pkges <- c('tidyr', 'dplyr', 'reshape2', 'terra', 'sf', 'sp', 'raster', 'data.table', 'rcompanion', 'arrow', 'readr',
            'habtools', 'parallel', 'doParallel', 'mFD', 'forcats', 'ggh4x', 'xpectr', 'pbapply', 'gmodels', 'spsUtil', 
            'stringr', 'ggplot2', 'ggridges', 'hexbin', 'fishualize', 'viridis', 'brms', 'tidybayes', 'ggdist', 'gtools', 
-           'ggeffects', 'vegan', 'bayestestR', 'BayesFactor', 'mgcv', 'qbrms', 'arrow', 'rstatix', 'MASS')
+           'ggeffects', 'vegan', 'bayestestR', 'BayesFactor', 'mgcv', 'qbrms', 'arrow', 'glmnet')
 
 # Install all packages required across the scripts (unless already installed on the system)
 install.packages(setdiff(pkges, rownames(installed.packages())))

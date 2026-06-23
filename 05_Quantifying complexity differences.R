@@ -238,33 +238,47 @@ if(FirstRun == TRUE) {
 # Ecosystem types
 EcoDatSample <- EcoTypeDat %>%
   group_by(EcosystemType) %>% 
-  map_batches(~ as_record_batch(sample_frac(as.data.frame(.), 0.0001))) %>%   
+  map_batches(~ as_record_batch(sample_frac(as.data.frame(.), 0.0015))) %>%   
   collect()                                 # Pull only this tiny slice into RAM
 
+# Removed unused factor levels
+EcoDatSample$EcosystemType <- droplevels(EcoDatSample$EcosystemType)
 
-library(brms)
-
-# Force brms to use cmdstanr
-options(brms.backend = "cmdstanr")
+# Specify model parameters
+xMat <- as.matrix(EcoDatSample[, c('D', 'R')])
+yVec <- EcoDatSample$EcosystemType
 
 # Specify the multinomial formula
-# brms treats the first level of a factor as the reference category by default
-df_subsample$outcome <- as.factor(df_subsample$outcome)
+fit_multinomial <- glmnet(xMat, yVec, family = 'multinomial')
+plot(fit_multinomial)
+cvfit <- cv.glmnet(xMat, yVec, family = "multinomial", type.multinomial = "grouped")
+plot(cvfit)
+cf_mod <- coef(fit_multinomial)
+
+test <- cf_mod %>%
+  lapply(as.matrix) %>%
+  lapply(function(mat) {
+    apply(mat, 1, CI95)
+  }) %>%
+  Reduce(cbind, x = .) %>%
+  t()
+
+
 bayesfactor(fit_multinomial, 'b_D > 0')
-fit_multinomial <- qbrm(
+fit_multinomial <- 
+  qbrm(
   formula = EcosystemType ~ D + R,
   data = EcoDatSample,
   family = multinomial()
 )
 
-fit_multinomial <- brm(
+fit_multinomial <- qbrms(
   formula = EcosystemType ~ D + R,
   data = EcoDatSample,
-  family = categorical(),
-  iter = 2000,
-  warmup = 1000,
-  backend = "cmdstanr"
+  family = multinomial(),
 )
+
+summary(fit_multinomial)
 
 density_plot(fit_multinomial)
     mod1 <- quiet(qbrms(formula = PD2 ~ H2 + Lat + Lon, family = gaussian(), data = PDdat))
