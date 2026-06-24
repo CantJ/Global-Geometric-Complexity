@@ -234,74 +234,56 @@ if(FirstRun == TRUE) {
 # STEP 4: Quantify and visualize complexity patterns
 #############################
 
-# Run multivariate analysis of variance (PERMANOVA)
-# Ecosystem types
+# Determine how structural complexity predicts ecosystem and land use types
+## Ecosystem types
+# Isolate data samples to not overwhelm computational system
 EcoDatSample <- EcoTypeDat %>%
   group_by(EcosystemType) %>% 
-  map_batches(~ as_record_batch(sample_frac(as.data.frame(.), 0.0015))) %>%   
+  map_batches(~ as_record_batch(sample_frac(as.data.frame(.), 0.001))) %>%   
   collect()                                 # Pull only this tiny slice into RAM
 
 # Removed unused factor levels
 EcoDatSample$EcosystemType <- droplevels(EcoDatSample$EcosystemType)
 
-# Specify model parameters
-xMat <- as.matrix(EcoDatSample[, c('D', 'R')])
-yVec <- EcoDatSample$EcosystemType
+# Fit multinomial logistic model
+EcoMod <- multinom(EcosystemType ~ D + R, data = EcoDatSample)
+# Explore effect of dropping terms
+EcoModD <- multinom(EcosystemType ~ D, data = EcoDatSample)
+EcoModR <- multinom(EcosystemType ~ R, data = EcoDatSample)
+# Repeat model without structural metrics to generate baseline null model.
+null_EcoMod <- multinom(EcosystemType ~ 1, data = EcoDatSample)
+# Use Likelihood Ratio Test to determine if structural metrics explain a significant amount of variance compared to null model
+lmtest::lrtest(null_EcoMod, EcoModD, EcoModR, EcoMod)
+AIC(EcoModD, EcoModR, EcoMod)
 
-# Specify the multinomial formula
-fit_multinomial <- glmnet(xMat, yVec, family = 'multinomial')
-plot(fit_multinomial)
-cvfit <- cv.glmnet(xMat, yVec, family = "multinomial", type.multinomial = "grouped")
-plot(cvfit)
-cf_mod <- coef(fit_multinomial)
+## Land Use types
+# Isolate data samples to not overwhelm computational system
+LUDatSample <- LandUseDat %>%
+  group_by(LandUse) %>% 
+  map_batches(~ as_record_batch(sample_frac(as.data.frame(.), 0.001))) %>%   
+  collect()                                 # Pull only this tiny slice into RAM
 
-test <- cf_mod %>%
-  lapply(as.matrix) %>%
-  lapply(function(mat) {
-    apply(mat, 1, CI95)
-  }) %>%
-  Reduce(cbind, x = .) %>%
-  t()
+# Removed unused factor levels
+LUDatSample$LandUse <- droplevels(LUDatSample$LandUse)
+
+# Fit multinomial logistic model
+LUMod <- multinom(LandUse ~ D + R, data = LUDatSample)
+# Explore effect of dropping terms
+LUModD <- multinom(LandUse ~ D, data = LUDatSample)
+LUModR <- multinom(LandUse ~ R, data = LUDatSample)
+# Repeat model without structural metrics to generate baseline null model.
+null_LUMod <- multinom(LandUse ~ 1, data = LUDatSample)
+# Use Likelihood Ratio Test to determine if structural metrics explain a significant amount of variance compared to null model
+lmtest::lrtest(null_LUMod, LUModD, LUModR, LUMod)
+AIC(LUModD, LUModR, LUMod)
+
+# Extract marginal effects slope coefficients (probability) to visualise effects of structural metrics on Ecosystem and Land use types
+LU_b <- avg_slopes(LUMod, variables = c('D', 'R'))
+Eco_b <- avg_slopes(EcoMod, variables = c('D', 'R'))
 
 
-bayesfactor(fit_multinomial, 'b_D > 0')
-fit_multinomial <- 
-  qbrm(
-  formula = EcosystemType ~ D + R,
-  data = EcoDatSample,
-  family = multinomial()
-)
+### -------------------------------------- WORKS TO HERE 
 
-fit_multinomial <- qbrms(
-  formula = EcosystemType ~ D + R,
-  data = EcoDatSample,
-  family = multinomial(),
-)
-
-summary(fit_multinomial)
-
-density_plot(fit_multinomial)
-    mod1 <- quiet(qbrms(formula = PD2 ~ H2 + Lat + Lon, family = gaussian(), data = PDdat))
-
-# Run a traditional Distance Matrix and PERMANOVA equivalents instantly
-EcoDist <- dist(EcoDatSample[, c("D", "R")])
-EcoTypesMod <- adonis2(EcoDatSample$EcosystemType ~ EcoDatSample[, c("D", "R")], data = EcoDatSample)
-print(permanova)
-
-varsEco <- cbind(D = EcoTypeDat$D, EcoTypeDat$R)
-EcoTypesMod <- manova(varsEco ~ EcosystemType, data = EcoTypeDat)
-summary(EcoTypesMod)
-# Land Use
-varsLU <- cbind(D = LandUseDat$D, R = LandUseDat$R)
-LandUseMod <- manova(varsLU ~ LandUse, data = LandUseDat)
-summary(LandUseMod)
-
-# Run post-hoc tests for location of observed statistical inference
-# This post-hoc test takes the form of a linear discriminant analysis to distil the statistical differences between groups.
-EcoTypesPostHoc <- lda(EcoTypeDat$EcosystemType ~ varsEco, CV = F)
-EcoTypesPostHoc
-LandUsePostHoc <- lda(LandUseDat$LandUse ~ varsLU, CV = F)
-LandUsePostHoc
 
 # Extract post-hoc summary statistics for plotting.
 # Ecosystem Types
