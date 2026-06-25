@@ -231,7 +231,7 @@ if(FirstRun == TRUE) {
 
 
 ###############################
-# STEP 4: Quantify and visualize complexity patterns
+# STEP 4: Quantify complexity patterns
 #############################
 
 # Determine how structural complexity predicts ecosystem and land use types
@@ -277,48 +277,260 @@ null_LUMod <- multinom(LandUse ~ 1, data = LUDatSample)
 lmtest::lrtest(null_LUMod, LUModD, LUModR, LUMod)
 AIC(LUModD, LUModR, LUMod)
 
-# Extract marginal effects slope coefficients (probability) to visualise effects of structural metrics on Ecosystem and Land use types
-LU_b <- avg_slopes(LUMod, variables = c('D', 'R'))
-Eco_b <- avg_slopes(EcoMod, variables = c('D', 'R'))
 
+###############################
+# STEP 5: Visualize complexity patterns
+###############################
 
-### -------------------------------------- WORKS TO HERE 
+## Isolate mean ecosystem complexities to not overwhelm computational system
+EcoDatSample <- EcoTypeDat %>%
+  group_by(EcosystemType) %>% 
+  summarise(Dmean = mean(D),
+            Rmean = mean(R)) %>%   
+  collect()
+# Add realm variable back into data
+EFGcodes <- read.csv(paste0(FilePath, 'EFGcodes_names.csv'))
+EcoDatSample <- merge(EcoDatSample, EFGcodes[,c('Ecosystem_Name', 'Realm_Name')], by.x = 'EcosystemType', by.y = 'Ecosystem_Name')
+names(EcoDatSample) <- c("EcosystemType", "Dmean", "Rmean", 'Realm')
+# Reformat variables to aid visualization clarity
+EcoDatSample$Realm <- factor(EcoDatSample$Realm,
+                        levels = c('Marine', 'Subterranean', 'Freshwater', 'Terrestrial', 'Coastal', 'Wetland'))
 
+### Mean Ecosystem complexity plot -------------------------------
+# Select representative environments
+Location1 <- EcoDatSample[which(EcoDatSample$EcosystemType == 'Seamounts, ridges & plateaus'),]
+Location2 <- EcoDatSample[which(EcoDatSample$EcosystemType == 'Permenant marshes'),]
+Location3 <- EcoDatSample[which(EcoDatSample$EcosystemType == 'Oceanic cool temperate rainforests'),]
+Location4 <- EcoDatSample[which(EcoDatSample$EcosystemType == 'Polar tundra'),]
+Location5 <- EcoDatSample[which(EcoDatSample$EcosystemType == 'Coastal river deltas'),] 
+Location6 <- EcoDatSample[which(EcoDatSample$EcosystemType == 'Permenant salt & soda lakes'),]
+Location7 <- EcoDatSample[which(EcoDatSample$EcosystemType == 'Sclerophyll hot deserts & semi-deserts'),]
 
-# Extract post-hoc summary statistics for plotting.
-# Ecosystem Types
-df %>% group_by(plant_var) %>%  summarise(n = n(), mean = mean(canopy_vol), sd = sd(canopy_vol))
-# Land Use
-LU_lda <- data.frame(LandUse = LandUseDat[, "LandUse"], lda = predict(LandUsePostHoc)$x)
-plotLU <- LU_lda %>% group_by(LandUse) %>% summarise(n = n(), meanLD1 = mean(lda.LD1), meanLD2 = mean(lda.LD2))
-
-# Plot centroid positions of Ecosystem and Land use types on their respective LDA planes
-## Ecosystem types
-
-
-## Land Use
-ggplot(aes(x = meanLD1, y = meanLD2), data = plotLU) + 
-  geom_point(aes(colour = LandUse), size = 6) +
-  scale_color_manual(values = magma(n = length(unique(plotLU$LandUse))),
-                     limits = c("Urban","Cropland","Mosaic Vegetation/Cropland","Mosaic Vegetation",
-                                "Grassland","Shrubland","Lichens & Mosses","Sparse Vegetation",         
-                                "Mixed Tree Cover","Tree Cover (Needleleaved)","Tree Cover (Broadleaved)",
-                                'Wetlands',"Bare substrate","Permenant Snow & Ice"),
-                     guide = guide_legend(title = 'Land Cover Type', 
+# Create mean complexity plot
+ggplot(EcoDatSample, aes(x=Dmean, y=Rmean)) +
+  annotate('rect', xmin = 2.225, xmax = 2.35, ymin = -2.85, ymax = -0.5, fill = 'grey', alpha = 0.5) +
+  annotate('rect', xmin = 2.1, xmax = 2.225, ymin = -5.2, ymax = -2.85, fill = 'grey', alpha = 0.2) +
+  geom_hline(aes(yintercept = -2.85), linetype = "dashed", col = 'gray50', linewidth = 1) +
+  geom_vline(aes(xintercept = 2.225), linetype = "dashed", col = 'gray50', linewidth = 1) +
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.13, yend = -1.8), 
+               data = Location1, color = "#00204DFF", linewidth = 1.5, alpha = 0.7, linetype = 'solid') + # Seamounts
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.33, yend = -3.7), 
+               data = Location2, color = "#FDE725FF", linewidth = 1.5, alpha = 0.7, linetype = 'solid') + # Subglacial Lakes
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.28, yend = Rmean), 
+               data = Location3, color = "#5F9258FF", linewidth = 1.5, alpha = 0.7, linetype = 'solid') + # Oceanic Temperate Forests
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.28, yend = Rmean), 
+               data = Location4, color = "#5F9258FF", linewidth = 1.5, alpha = 0.7, linetype = 'solid') + # Polar Tundra
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.35, yend = -4.5), 
+               data = Location5, color = "#CBBA69FF", linewidth = 1.5, alpha = 0.7, linetype = 'solid') + # Coastal River Deltas
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.14, yend = -4.9), 
+               data = Location6, color = "lightblue", linewidth = 1.5, alpha = 0.9, linetype = 'solid') + # Permanent Salt Lakes
+  geom_segment(aes(x = Dmean, y = Rmean, xend = 2.16, yend = -4.4), 
+               data = Location7, color = "#5F9258FF", linewidth = 1.5, alpha = 0.7, linetype = 'solid') + # Sclerophyll hot deserts and semi-deserts
+  geom_point(aes(color = Realm), size = 8) +
+  xlab(NULL) + # Fractal Dimension
+  ylab(NULL) + # Rugosity
+  scale_y_continuous(limits = c(-5.2,-0.5), breaks = c(-4.9,-2.85,-0.8), labels = function(i) { format(exp(i), scientific = F, digits = 3) }, expand = c(0,0)) +
+  scale_x_continuous(limits = c(2.10,2.35), labels = function(x) { format(x, digits = 3) }, expand = c(0,0)) +
+  scale_color_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"),
+                     guide = guide_legend(title = 'Realm', 
                                           reverse = F, label = T)) +
-  scale_x_continuous(labels = function(x) { format(x, digits = 2) }) +
-  scale_y_continuous(labels = function(x) { format(x, digits = 2) }) +
-  xlab(NULL) +
-  ylab(NULL) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 25, colour = "black"), axis.text.y = element_text(size = 25, colour = "black"),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
                      panel.border = element_blank(),
                      legend.background = element_blank(),
-                     legend.box.background = element_rect(colour = 0),
-                     axis.line = element_line(color = 'black'),
-                     plot.margin = margin(15, 10, 10, 10))
-  
+                     legend.box.background = element_rect(colour = 0)) +
+  theme(axis.line = element_line(color = 'black'))
 
-# Extract densities of complexity distributions
+### Complexity distributions across ecosystems and biomes plots -------------------------------
+
+# Compute density distributions across ecosystem types
+# Rugosity
+EcoRugosity <- EcoTypeDat %>%
+  dplyr::select(EcosystemType) %>%
+  distinct() %>%
+  collect()
+# Add Biome and Realm Data
+EcoRugosity <- merge(setDT(EcoRugosity), setDT(EFGcodes[,c('Ecosystem_Name', 'Realm_Name', 'Biome_Name')]), by.x = 'EcosystemType', by.y = 'Ecosystem_Name')
+# Reformat variables to aid visualization clarity
+names(EcoRugosity) <- c('EcosystemType', 'Realm', 'Biome')
+EcoRugosity$Realm <- factor(EcoRugosity$Realm,
+                             levels = c('Marine', 'Subterranean', 'Freshwater', 'Terrestrial', 'Coastal', 'Wetland'))
+EcoRugosity$Biome <- factor(EcoRugosity$Biome, levels = rev(c('Continental shelf','Pelagic & deep sea','Transitional inlets & bays','Anthropogenic marine', # Marine
+                                                              'Subterranean caves & pools', # Subterranean
+                                                              'Rivers & streams','Lakes','Artificial wetland', # Freshwater
+                                                              'Tropical-subtropical forest','Temperate forests & woodland','Shrublands & shrubby woodland','Savanna & grassland','Desert & semi-desert','Polar/alpine','Urban & Farmland', # Terrestrial
+                                                              'Brackish tidal systems','Natural intertidal shoreline','Supralittoral coastal systems','Anthropogenic shorelines', # Coastal
+                                                              'Wetland'))) # Wetlands
+EcoRugosity$EcosystemType <- factor(EcoRugosity$EcosystemType, levels = rev(c(
+                                                              # Marine
+                                                              'Seagrass meadows','Rhodolith/Maerl beds','Kelp forests','Photic coral reefs','Shellfish beds & reefs','Upwelling zones','Epipelagic ocean waters','Mesopelagic ocean waters',
+                                                              'Bathypelagic ocean waters','Abyssopelagic ocean waters','Sea ice','Continental & island slopes','Submarine canyons',
+                                                              'Abyssal plains','Seamounts, ridges & plateaus','Hadal trenches & troughs','Chemosynthetic-based-ecosystems','Deepwater coastal inlets','Permenantly open riverine estuaries and bays',
+                                                              'Intermittently closed and open lakes & lagoons','Marine aquafarms',
+                                                              # Subterranean
+                                                              'Aerobic caves','Underground streams & pools','Groundwater ecosystems','Anchialine caves','Anchialine pools',
+                                                              # Freshwater
+                                                              'Permenant upland streams','Permenant lowland rivers','Freeze-thaw rivers & streams','Seasonal upland streams','Seasonal lowland rivers','Eposodic arid rivers','Large lowland rivers','Large permenant freshwater lakes','Small permenant freshwater lakes','Seasonal freshwater lakes',
+                                                              'Freeze-thaw freshwater lakes','Ephemeral freshwater lakes','Permenant salt & soda lakes','Ephemeral salt lakes',
+                                                              'Artesian springs & oases','Geothermal pools & wetlands','Large reservoirs','Constructed lacustrine wetlands','Rice paddies','Canals, ditches & drains',
+                                                              # Terrestrial
+                                                              'Tropical/Subtropical lowland rainforests','Tropical/Subtropical dry forests & thickets','Tropical/Subtropical montane forests','Tropical heath forests',
+                                                              'Boreal and temperate high montane forests & woodlands','Deciduous temperate forests','Oceanic cool temperate rainforests','Warm temperate laurophyll forests','Temperate pyric humid forests','Temperate pyric sclerophyll forests & woodlands',
+                                                              'Seasonally dry tropical shrublands','Seasonally dry temperate heath & shrublands','Cool temperate heathlands','Young rocky pavements, lava flows & screes','Trophic savannas','Pyric tussock savannas',
+                                                              'Hummock savannas','Temperate savannas','Temperate subhumid grasslands','Semi-desert steppe',
+                                                              'Succulent/Thorny deserts & semi-deserts','Sclerophyll hot deserts & semi-deserts','Cool deserts & semi-deserts','Hyper-arid deserts','Ice sheets, glaciers & perennial snowfields','Polar/alpine cliffs, screes, outcrops & lava flows','Polar tundra','Temperate alpine grasslands & shrublands',
+                                                              'Tropical alpine grasslands & herbfields','Annual croplands','Sown pastures & fields','Plantations','Urban & industrial ecosystems','Derived semi-natural pastures & old fields',
+                                                              # Coastal
+                                                              'Coastal river deltas','Intertidal forests & shrublands','Coastal saltmarshes & reedbeds','Rocky shorelines','Muddy shorelines','Sandy shorelines','Boulder & cobble shores',
+                                                              'Coastal shrublands & grasslands','Large seabird & pinniped colonies','Artificial shorelines',
+                                                              # Wetlands
+                                                              'Tropical flooded forests & peat forests','Permenant marshes',
+                                                              'Seasonal floodplain marshes','Episodic arid floodplains','Boreal, temperate & montane peat bogs','Boreal & temperate fens')))
+# Duplicate output for Fractal Dimension also
+EcoFD <- EcoRugosity
+
+# compute density distributions for complexity estimates associated with each ecosystem typology.
+for(ii in seq_along(EcoRugosity$EcosystemType)){
+  # Isolate Rugosity values for each ecosystem type 
+  TmpR <- EcoTypeDat %>% 
+    filter(EcosystemType == EcoRugosity$EcosystemType[ii]) %>%
+    dplyr::select(R) %>%
+    # Pull the raw values into memory (ensuring data fits in RAM)
+    collect() %>% 
+    reframe(# standard density returns an object; we wrap it in a data frame
+      as.data.frame(density(R)[c("x", "y")])) %>%
+    rename(value = x, density = y)
+  # Repeat for fractal dimension 
+  TmpD <- EcoTypeDat %>% 
+    filter(EcosystemType == EcoRugosity$EcosystemType[ii]) %>%
+    dplyr::select(D) %>%
+    # Pull the raw values into memory (ensuring data fits in RAM)
+    collect() %>% 
+    reframe(# standard density returns an object; we wrap it in a data frame
+      as.data.frame(density(D)[c("x", "y")])) %>%
+    rename(value = x, density = y)
+  
+  #### Works to here -------------------------------------------
+  
+  
+  # Add storage outputs above as a list and save density vectors for both rugosity and fractal dimension
+    data.frame(Realm = rep(EcoTypesDF$Realm, each = 512),
+                       Realm2 = rep(EcoTypesDF$Realm_2, each = 512),
+                       Biome = rep(EcoTypesDF$Biome, each = 512),
+                       EFG = rep(EcoTypesDF$EFG, each = 512),
+                       xx = unlist(lapply(EcoTypesDensityR, '[[', 1)),
+                       yy = unlist(lapply(EcoTypesDensityR, '[[', 2)))
+}
+
+# Generate density plots (Realm level)
+# Rugosity
+ggplot(ET_R_dat) +
+  geom_ridgeline(aes(x = xx, y = Realm2, height = yy, fill = Realm2, colour = Realm2, scale = 1)) +
+  scale_x_continuous(labels = function(i) { format(exp(i), scientific = F, digits = 1) }) +
+  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_ridges() +
+  theme(axis.text.x = element_text(size = 20, colour = "black"), 
+        axis.text.y = element_text(size = 20, colour = "black"),
+        panel.border = element_rect(linewidth = 1.5),
+        axis.ticks = element_line(linewidth = 0.9),
+        legend.position = 'none',
+        plot.margin = margin(5,15,5,5),
+        axis.line = element_line(color = 'black'))
+
+# Fractal Dimension
+ggplot(ET_D_dat) +
+  geom_ridgeline(aes(x = xx, y = Realm2, height = yy, fill = Realm2, colour = Realm2, scale = 0.2)) +
+  scale_x_continuous(labels = function(i) { format(i, digits = 3) }) +
+  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_ridges() +
+  theme(axis.text.x = element_text(size = 20, colour = "black"), 
+        axis.text.y = element_text(size = 20, colour = "black"),
+        panel.border = element_rect(linewidth = 1.5),
+        axis.ticks = element_line(linewidth = 0.9),
+        legend.position = 'none',
+        plot.margin = margin(5,15,5,5),
+        axis.line = element_line(color = 'black'))
+
+# Generate plots (Biome level)
+# Rugosity
+ggplot(ET_R_dat) +
+  geom_ridgeline(aes(x = xx, y = Biome_Name, height = yy, fill = Realm2, colour = Realm2, scale = 1)) +
+  scale_x_continuous(labels = function(i) { format(exp(i), scientific = F, digits = 1) }) +
+  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_ridges() +
+  theme(axis.text.x = element_text(size = 20, colour = "black"),
+        axis.text.y = element_text(size = 20, colour = "black"),
+        panel.border = element_rect(linewidth = 1.5),
+        axis.ticks = element_line(linewidth = 0.9),
+        legend.position = 'none',
+        plot.margin = margin(5,15,5,5),
+        axis.line = element_line(color = 'black'))
+
+# Fractal dimension
+ggplot(ET_D_dat) +
+  geom_ridgeline(aes(x = xx, y = Biome_Name, height = yy, fill = Realm2, colour = Realm2, scale = 0.15)) +
+  scale_x_continuous(labels = function(i) { format(i, digits = 3) }) +
+  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_ridges() +
+  theme(axis.text.x = element_text(size = 20, colour = "black"),
+        axis.text.y = element_text(size = 20, colour = "black"),
+        panel.border = element_rect(linewidth = 1.5),
+        axis.ticks = element_line(linewidth = 0.9),
+        legend.position = 'none',
+        plot.margin = margin(5,15,5,5),
+        axis.line = element_line(color = 'black'))
+
+# Generate plots (Ecosystem level)
+# Rugosity
+ggplot(ET_R_dat) +
+  geom_ridgeline(aes(x = xx, y = EFG_Name, height = yy, fill = Realm2, colour = Realm2, scale = 1)) +
+  scale_x_continuous(labels = function(i) { format(exp(i), scientific = F, digits = 1) }) +
+  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_ridges() +
+  theme(axis.text.x = element_text(size = 20, colour = "black"), 
+        axis.text.y = element_text(size = 9, colour = "black"), 
+        panel.border = element_rect(linewidth = 1.5),
+        axis.ticks = element_line(linewidth = 0.9),
+        legend.position = 'none',
+        plot.margin = margin(5,15,5,5),
+        axis.line = element_line(color = 'black'))
+
+# Fractal dimension
+ggplot(ET_D_dat) +
+  geom_ridgeline(aes(x = xx, y = EFG_Name, height = yy, fill = Realm2, colour = Realm2, scale = 0.15)) +
+  scale_x_continuous(labels = function(i) { format(i, digits = 3) }) +
+  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_ridges() +
+  theme(axis.text.x = element_text(size = 20, colour = "black"), 
+        axis.text.y = element_text(size = 9, colour = "black"), 
+        panel.border = element_rect(linewidth = 1.5),
+        axis.ticks = element_line(linewidth = 0.9),
+        legend.position = 'none',
+        plot.margin = margin(5,15,5,5),
+        axis.line = element_line(color = 'black'))
+
+
+
+
+# Add in the next part of the script combining process....
+# Finish by renaming scripts.
