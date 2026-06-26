@@ -356,7 +356,7 @@ EcoRugosity <- merge(setDT(EcoRugosity), setDT(EFGcodes[,c('Ecosystem_Name', 'Re
 # Reformat variables to aid visualization clarity
 names(EcoRugosity) <- c('EcosystemType', 'Realm', 'Biome')
 EcoRugosity$Realm <- factor(EcoRugosity$Realm,
-                             levels = c('Marine', 'Subterranean', 'Freshwater', 'Terrestrial', 'Coastal', 'Wetland'))
+                             levels = rev(c('Marine', 'Subterranean', 'Freshwater', 'Terrestrial', 'Coastal', 'Wetland')))
 EcoRugosity$Biome <- factor(EcoRugosity$Biome, levels = rev(c('Continental shelf','Pelagic & deep sea','Transitional inlets & bays','Anthropogenic marine', # Marine
                                                               'Subterranean caves & pools', # Subterranean
                                                               'Rivers & streams','Lakes','Artificial wetland', # Freshwater
@@ -390,9 +390,12 @@ EcoRugosity$EcosystemType <- factor(EcoRugosity$EcosystemType, levels = rev(c(
                                                               'Seasonal floodplain marshes','Episodic arid floodplains','Boreal, temperate & montane peat bogs','Boreal & temperate fens')))
 # Duplicate output for Fractal Dimension also
 EcoFD <- EcoRugosity
+# set additional output storage
+EcoRugosity$xx <- EcoRugosity$yy <- EcoFD$xx <- EcoFD$yy <- I(list())
 
 # compute density distributions for complexity estimates associated with each ecosystem typology.
 for(ii in seq_along(EcoRugosity$EcosystemType)){
+  print(ii) # progress read out
   # Isolate Rugosity values for each ecosystem type 
   TmpR <- EcoTypeDat %>% 
     filter(EcosystemType == EcoRugosity$EcosystemType[ii]) %>%
@@ -411,24 +414,32 @@ for(ii in seq_along(EcoRugosity$EcosystemType)){
     reframe(# standard density returns an object; we wrap it in a data frame
       as.data.frame(density(D)[c("x", "y")])) %>%
     rename(value = x, density = y)
-  
-  #### Works to here -------------------------------------------
-  
-  
-  # Add storage outputs above as a list and save density vectors for both rugosity and fractal dimension
-    data.frame(Realm = rep(EcoTypesDF$Realm, each = 512),
-                       Realm2 = rep(EcoTypesDF$Realm_2, each = 512),
-                       Biome = rep(EcoTypesDF$Biome, each = 512),
-                       EFG = rep(EcoTypesDF$EFG, each = 512),
-                       xx = unlist(lapply(EcoTypesDensityR, '[[', 1)),
-                       yy = unlist(lapply(EcoTypesDensityR, '[[', 2)))
-}
+  # Save desired outputs
+  # Rugosity
+  EcoRugosity$xx[[ii]] <- TmpR$value
+  EcoRugosity$yy[[ii]] <- TmpR$density
+  # Fractal dimension
+  EcoFD$xx[[ii]] <- TmpD$value
+  EcoFD$yy[[ii]] <- TmpD$density
+} # close loop
+
+# Reshape to a long format
+EcoRugosity <- data.frame(Realm = rep(EcoRugosity$Realm, each = 512),
+                   Biome = rep(EcoRugosity$Biome, each = 512),
+                   EcosystemType = rep(EcoRugosity$EcosystemType, each = 512),
+                   xx = unlist(EcoRugosity$xx),
+                   yy = unlist(EcoRugosity$yy))
+EcoFD <- data.frame(Realm = rep(EcoFD$Realm, each = 512),
+                          Biome = rep(EcoFD$Biome, each = 512),
+                          EcosystemType = rep(EcoFD$EcosystemType, each = 512),
+                          xx = unlist(EcoFD$xx),
+                          yy = unlist(EcoFD$yy))
 
 # Generate density plots (Realm level)
 # Rugosity
-ggplot(ET_R_dat) +
-  geom_ridgeline(aes(x = xx, y = Realm2, height = yy, fill = Realm2, colour = Realm2, scale = 1)) +
-  scale_x_continuous(labels = function(i) { format(exp(i), scientific = F, digits = 1) }) +
+ggplot(EcoRugosity) +
+  geom_ridgeline(aes(x = xx, y = Realm, height = yy, fill = Realm, colour = Realm, scale = 1)) +
+  scale_x_continuous(breaks = c(-12, -6, 0), labels = function(i) { format(exp(i), scientific = F, digits = 1) }) +
   scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
   scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
   xlab(NULL) +
@@ -443,8 +454,8 @@ ggplot(ET_R_dat) +
         axis.line = element_line(color = 'black'))
 
 # Fractal Dimension
-ggplot(ET_D_dat) +
-  geom_ridgeline(aes(x = xx, y = Realm2, height = yy, fill = Realm2, colour = Realm2, scale = 0.2)) +
+ggplot(EcoFD) +
+  geom_ridgeline(aes(x = xx, y = Realm, height = yy, fill = Realm, colour = Realm, scale = 0.2)) +
   scale_x_continuous(labels = function(i) { format(i, digits = 3) }) +
   scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
   scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
@@ -461,16 +472,16 @@ ggplot(ET_D_dat) +
 
 # Generate plots (Biome level)
 # Rugosity
-ggplot(ET_R_dat) +
-  geom_ridgeline(aes(x = xx, y = Biome_Name, height = yy, fill = Realm2, colour = Realm2, scale = 1)) +
+ggplot(EcoRugosity) +
+  geom_ridgeline(aes(x = xx, y = Biome, height = yy, fill = Realm, colour = Realm, scale = 1)) +
   scale_x_continuous(labels = function(i) { format(exp(i), scientific = F, digits = 1) }) +
-  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
-  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_fill_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
+  scale_color_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
   xlab(NULL) +
   ylab(NULL) +
   theme_ridges() +
   theme(axis.text.x = element_text(size = 20, colour = "black"),
-        axis.text.y = element_text(size = 20, colour = "black"),
+        axis.text.y = element_text(size = 10, colour = "black"),
         panel.border = element_rect(linewidth = 1.5),
         axis.ticks = element_line(linewidth = 0.9),
         legend.position = 'none',
@@ -478,16 +489,16 @@ ggplot(ET_R_dat) +
         axis.line = element_line(color = 'black'))
 
 # Fractal dimension
-ggplot(ET_D_dat) +
-  geom_ridgeline(aes(x = xx, y = Biome_Name, height = yy, fill = Realm2, colour = Realm2, scale = 0.15)) +
+ggplot(EcoFD) +
+  geom_ridgeline(aes(x = xx, y = Biome, height = yy, fill = Realm, colour = Realm, scale = 0.15)) +
   scale_x_continuous(labels = function(i) { format(i, digits = 3) }) +
-  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
-  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_fill_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
+  scale_color_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
   xlab(NULL) +
   ylab(NULL) +
   theme_ridges() +
   theme(axis.text.x = element_text(size = 20, colour = "black"),
-        axis.text.y = element_text(size = 20, colour = "black"),
+        axis.text.y = element_text(size = 10, colour = "black"),
         panel.border = element_rect(linewidth = 1.5),
         axis.ticks = element_line(linewidth = 0.9),
         legend.position = 'none',
@@ -496,11 +507,11 @@ ggplot(ET_D_dat) +
 
 # Generate plots (Ecosystem level)
 # Rugosity
-ggplot(ET_R_dat) +
-  geom_ridgeline(aes(x = xx, y = EFG_Name, height = yy, fill = Realm2, colour = Realm2, scale = 1)) +
+ggplot(EcoRugosity) +
+  geom_ridgeline(aes(x = xx, y = EcosystemType, height = yy, fill = Realm, colour = Realm, scale = 1)) +
   scale_x_continuous(labels = function(i) { format(exp(i), scientific = F, digits = 1) }) +
-  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
-  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_fill_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
+  scale_color_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
   xlab(NULL) +
   ylab(NULL) +
   theme_ridges() +
@@ -513,11 +524,11 @@ ggplot(ET_R_dat) +
         axis.line = element_line(color = 'black'))
 
 # Fractal dimension
-ggplot(ET_D_dat) +
-  geom_ridgeline(aes(x = xx, y = EFG_Name, height = yy, fill = Realm2, colour = Realm2, scale = 0.15)) +
+ggplot(EcoFD) +
+  geom_ridgeline(aes(x = xx, y = EcosystemType, height = yy, fill = Realm, colour = Realm, scale = 0.15)) +
   scale_x_continuous(labels = function(i) { format(i, digits = 3) }) +
-  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
-  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_fill_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
+  scale_color_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
   xlab(NULL) +
   ylab(NULL) +
   theme_ridges() +
@@ -529,8 +540,299 @@ ggplot(ET_D_dat) +
         plot.margin = margin(5,15,5,5),
         axis.line = element_line(color = 'black'))
 
+### Complexity distributions across Land Use types -------------------------------
+# Compute density distributions across Land use types
+LandUseTypes <- LandUseDat %>%
+  dplyr::select(LandUse) %>%
+  distinct() %>%
+  collect()
+# set output storage
+LURugosity <- data.frame(LandUse = character(),
+                         xx = I(list()),
+                         yy = I(list()))
+LUFD <- data.frame(LandUse = character(),
+                   xx = I(list()),
+                   yy = I(list()))
+
+# compute density distributions for complexity estimates associated with each Land Use type.
+for(ii in seq_along(LandUseTypes$LandUse)){
+  print(ii) # progress read out
+  # Isolate Rugosity values for each category
+  TmpR <- LandUseDat %>% 
+    filter(LandUse == LandUseTypes$LandUse[ii]) %>%
+    dplyr::select(R) %>%
+    # Pull the raw values into memory (ensuring data fits in RAM)
+    collect() %>% 
+    reframe(# standard density returns an object; we wrap it in a data frame
+      as.data.frame(density(R)[c("x", "y")])) %>%
+    rename(value = x, density = y)
+  # Repeat for fractal dimension 
+  TmpD <- LandUseDat %>% 
+    filter(LandUse == LandUseTypes$LandUse[ii]) %>%
+    dplyr::select(D) %>%
+    # Pull the raw values into memory (ensuring data fits in RAM)
+    collect() %>% 
+    reframe(# standard density returns an object; we wrap it in a data frame
+      as.data.frame(density(D)[c("x", "y")])) %>%
+    rename(value = x, density = y)
+  # Save desired outputs
+  # Rugosity
+  LURugosity[ii, 'LandUse'] <- as.character(LandUseTypes$LandUse[ii])
+  LURugosity[[ii, 'xx']] <- TmpR$value
+  LURugosity[[ii, 'yy']] <- TmpR$density
+  # Fractal dimension
+  LUFD[ii, 'LandUse'] <- as.character(LandUseTypes$LandUse[ii])
+  LUFD[[ii, 'xx']] <- TmpD$value
+  LUFD[[ii, 'yy']] <- TmpD$density
+} # close loop
+
+# Reshape to a long format
+LURugosity <- data.frame(LandUse = rep(LURugosity$LandUse, each = 512),
+                          xx = unlist(LURugosity$xx),
+                          yy = unlist(LURugosity$yy))
+LUFD <- data.frame(LandUse = rep(LUFD$LandUse, each = 512),
+                    xx = unlist(LUFD$xx),
+                    yy = unlist(LUFD$yy))
+
+# Ensure appropriate variable formats
+LURugosity$LandUse <- factor(LURugosity$LandUse, levels = rev(c("Urban","Cropland","Mosaic Vegetation/Cropland","Mosaic Vegetation",
+                                                            "Grassland","Shrubland","Lichens & Mosses","Sparse Vegetation",         
+                                                            "Mixed Tree Cover","Tree Cover (Needleleaved)","Tree Cover (Broadleaved)",
+                                                            "Wetlands","Bare substrate","Permenant Snow & Ice")))
+LUFD$LandUse <- factor(LUFD$LandUse, levels = rev(c("Urban","Cropland","Mosaic Vegetation/Cropland","Mosaic Vegetation",
+                                                "Grassland","Shrubland","Lichens & Mosses","Sparse Vegetation",         
+                                                "Mixed Tree Cover","Tree Cover (Needleleaved)","Tree Cover (Broadleaved)",
+                                                "Wetlands","Bare substrate","Permenant Snow & Ice")))
+
+# Generate plots
+# Rugosity
+ggplot(LURugosity) +
+  geom_ridgeline(aes(x = xx, y = LandUse, height = yy, fill = LandUse, colour = LandUse, scale = 4)) +
+  scale_x_continuous(labels = function(i) { format(exp(i), scientific = F, digits = 1) }) +
+  scale_fill_manual(values = magma(n = length(LandUseTypes$LandUse)),
+                    limits = c("Urban","Cropland","Mosaic Vegetation/Cropland","Mosaic Vegetation",
+                               "Grassland","Shrubland","Lichens & Mosses","Sparse Vegetation",         
+                               "Mixed Tree Cover","Tree Cover (Needleleaved)","Tree Cover (Broadleaved)",
+                               'Wetlands',"Bare substrate","Permenant Snow & Ice")) +
+  scale_color_manual(values = magma(n = length(LandUseTypes$LandUse)),
+                     limits = c("Urban","Cropland","Mosaic Vegetation/Cropland","Mosaic Vegetation",
+                                "Grassland","Shrubland","Lichens & Mosses","Sparse Vegetation",         
+                                "Mixed Tree Cover","Tree Cover (Needleleaved)","Tree Cover (Broadleaved)",
+                                'Wetlands',"Bare substrate","Permenant Snow & Ice")) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_ridges() +
+  theme(axis.text.x = element_text(size = 20, colour = "black"), 
+        axis.text.y = element_text(size = 15, colour = "black"), 
+        panel.border = element_rect(linewidth = 1.5),
+        axis.ticks = element_line(linewidth = 0.9),
+        legend.position = 'none',
+        plot.margin = margin(5,15,5,5),
+        axis.line = element_line(color = 'black'))
+
+# Fractal Dimension
+ggplot(LUFD) +
+  geom_ridgeline(aes(x = xx, y = LandUse, height = yy, fill = LandUse, colour = LandUse, scale = 0.4)) +
+  scale_fill_manual(values = magma(n = length(LandUseTypes$LandUse)),
+                    limits = c("Urban","Cropland","Mosaic Vegetation/Cropland","Mosaic Vegetation",
+                               "Grassland","Shrubland","Lichens & Mosses","Sparse Vegetation",         
+                               "Mixed Tree Cover","Tree Cover (Needleleaved)","Tree Cover (Broadleaved)",
+                               'Wetlands',"Bare substrate","Permenant Snow & Ice")) +
+  scale_color_manual(values = magma(n = length(LandUseTypes$LandUse)),
+                     limits = c("Urban","Cropland","Mosaic Vegetation/Cropland","Mosaic Vegetation",
+                                "Grassland","Shrubland","Lichens & Mosses","Sparse Vegetation",         
+                                "Mixed Tree Cover","Tree Cover (Needleleaved)","Tree Cover (Broadleaved)",
+                                'Wetlands',"Bare substrate","Permenant Snow & Ice")) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_ridges() +
+  theme(axis.text.x = element_text(size = 20, colour = "black"), 
+        axis.text.y = element_text(size = 15, colour = "black"), 
+        panel.border = element_rect(linewidth = 1.5),
+        axis.ticks = element_line(linewidth = 0.9),
+        legend.position = 'none',
+        plot.margin = margin(5,15,5,5),
+        axis.line = element_line(color = 'black'))
 
 
+######################################
+# STEP 6: Extract examples of complex environments
+######################################
 
-# Add in the next part of the script combining process....
-# Finish by renaming scripts.
+# Define working resolution
+L <- res(DRast)[1]
+# extract raster projection
+Moll <- crs(DRast)
+
+# Isolate the fractal dimension and rugosity regimes of selected global features
+
+## 1. Amazon Basin
+# Calculate mollweide coordinates from lat longs obtained from Google Earth
+FeatureCoords1 <- matrix(c(-62.2159, -2.4653), ncol = 2)
+FeatureCoords1 <- spTransform(SpatialPoints(FeatureCoords1, CRS('+proj=longlat')), CRS(Moll))@coords
+# Crop the complexity rasters around these selected points
+Feature1D <- dem_crop(DRast, x0 = FeatureCoords1[1], y0 = FeatureCoords1[2], L = L*500, plot = FALSE)
+Feature1R <- dem_crop(RRast, x0 = FeatureCoords1[1], y0 = FeatureCoords1[2], L = L*500, plot = FALSE)
+# Estimate mean complexity values
+mean(values(Feature1D), na.rm = TRUE)
+mean(values(Feature1R), na.rm = TRUE)
+
+## 2. Mariana Trench
+# Calculate mollweide coordinates from lat longs obtained from Google Earth
+FeatureCoords2 <- matrix(c(142.1996, 11.3493), ncol = 2)
+FeatureCoords2 <- spTransform(SpatialPoints(FeatureCoords2, CRS('+proj=longlat')), CRS(Moll))@coords
+# Crop the complexity rasters around these selected points
+Feature2D <- dem_crop(DRast, x0 = FeatureCoords2[1], y0 = FeatureCoords2[2], L = L*500, plot = FALSE)
+Feature2R <- dem_crop(RRast, x0 = FeatureCoords2[1], y0 = FeatureCoords2[2], L = L*500, plot = FALSE)
+# Estimate mean complexity values
+mean(values(Feature2D), na.rm = TRUE)
+mean(values(Feature2R), na.rm = TRUE)
+
+## 3. Sahara Desert
+# Calculate mollweide coordinates from lat longs obtained from Google Earth
+FeatureCoords3 <- matrix(c(25.6628, 23.4162), ncol = 2)
+FeatureCoords3 <- spTransform(SpatialPoints(FeatureCoords3, CRS('+proj=longlat')), CRS(Moll))@coords
+# Crop the complexity rasters around these selected points
+Feature3D <- dem_crop(DRast, x0 = FeatureCoords3[1], y0 = FeatureCoords3[2], L = L*500, plot = FALSE)
+Feature3R <- dem_crop(RRast, x0 = FeatureCoords3[1], y0 = FeatureCoords3[2], L = L*500, plot = FALSE)
+# Estimate mean complexity values
+mean(values(Feature3D), na.rm = TRUE)
+mean(values(Feature3R), na.rm = TRUE)
+
+# Convert data into data-frames (required for plotting rasters using ggplot)
+Feature1D_df <- st_as_sf(terra::as.points(Feature1D))
+Feature1R_df <- st_as_sf(terra::as.points(Feature1R))
+Feature2D_df <- st_as_sf(terra::as.points(Feature2D))
+Feature2R_df <- st_as_sf(terra::as.points(Feature2R))
+Feature3D_df <- st_as_sf(terra::as.points(Feature3D))
+Feature3R_df <- st_as_sf(terra::as.points(Feature3R))
+colnames(Feature1D_df)[1] <- colnames(Feature1R_df)[1] <- colnames(Feature2D_df)[1] <- colnames(Feature2R_df)[1] <-
+  colnames(Feature3D_df)[1] <- colnames(Feature3R_df)[1] <- "value"
+
+# identify the maximum and minimum fractal dimension and rugosity estimates across these selected features (to keep plot colour scales consistent)
+maxD <- ceiling(max(c(Feature1D_df$value, Feature2D_df$value, Feature3D_df$value),na.rm = T)*10)/10 # this little trick ensures the value is rounded up (at one decimal place)
+maxR <- log10(ceiling(max(c(Feature1R_df$value, Feature2R_df$value, Feature3R_df$value),na.rm = T)*10)/10)
+minD <- floor(min(c(Feature1D_df$value, Feature2D_df$value, Feature3D_df$value),na.rm = T)*10)/10
+minR <- -12
+
+# 1. Amazon Basin
+# Fractal Dimension
+ggplot(data = Feature1D_df) +
+  geom_sf(aes(col = value)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  scale_colour_gradientn(colours = fish(50, direction = -1, option = 'Variola_louti'),
+                         limits = c(minD,maxD),
+                         guide = guide_colorbar(ticks = F, title = 'D',
+                                                reverse = F, label = T,
+                                                na.value = "white")) +
+  coord_sf(expand = F) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
+                     axis.title = element_text(size = 15, colour = 'black'),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.8),
+                     legend.background = element_blank(),
+                     legend.box.background = element_rect(colour = "black"))
+
+# Rugosity
+ggplot(data = Feature1R_df) +
+  geom_sf(aes(col = log10(value))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  scale_colour_gradientn(colours = fish(50, direction = 1, option = 'Ostracion_whitleyi'),
+                         guide = guide_colorbar(ticks = F, title = expression('log'[10]*'(R)'),
+                                                reverse = F, label = T,
+                                                na.value = "white")) +
+  coord_sf(expand = F) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
+                     axis.title = element_text(size = 15, colour = 'black'),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.8),
+                     legend.background = element_blank(),
+                     legend.box.background = element_rect(colour = "black"))
+
+# 2. Mariana Trench
+# Fractal Dimension
+ggplot(data = Feature2D_df) +
+  geom_sf(aes(col = value)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  scale_colour_gradientn(colours = fish(50, direction = -1, option = 'Variola_louti'),
+                         limits = c(minD,maxD),
+                         guide = guide_colorbar(ticks = F, title = 'D',
+                                                reverse = F, label = T,
+                                                na.value = "white")) +
+  coord_sf(expand = F) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
+                     axis.title = element_text(size = 15, colour = 'black'),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.8),
+                     legend.background = element_blank(),
+                     legend.box.background = element_rect(colour = "black"))
+
+# Rugosity
+ggplot(data = Feature2R_df) +
+  geom_sf(aes(col = log10(value))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  scale_colour_gradientn(colours = fish(100, direction = 1, option = 'Ostracion_whitleyi'),
+                         guide = guide_colorbar(ticks = F, title = expression('log'[10]*'(R)'),
+                                                reverse = F, label = T,
+                                                na.value = "white")) +
+  coord_sf(expand = F) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
+                     axis.title = element_text(size = 15, colour = 'black'),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.8),
+                     legend.background = element_blank(),
+                     legend.box.background = element_rect(colour = "black"))
+
+# 3. Sahara Desert
+# Fractal Dimension
+ggplot(data = Feature3D_df) +
+  geom_sf(aes(col = value)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  scale_colour_gradientn(colours = fish(50, direction = -1, option = 'Variola_louti'),
+                         limits = c(minD,maxD),
+                         guide = guide_colorbar(ticks = F, title = 'D',
+                                                reverse = F, label = T,
+                                                na.value = "white")) +
+  coord_sf(expand = F) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
+                     axis.title = element_text(size = 15, colour = 'black'),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.8),
+                     legend.background = element_blank(),
+                     legend.box.background = element_rect(colour = "black"))
+
+# Rugosity
+ggplot(data = Feature3R_df) +
+  geom_sf(aes(col = log10(value))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  scale_colour_gradientn(colours = fish(100, direction = 1, option = 'Ostracion_whitleyi'),
+                         guide = guide_colorbar(ticks = F, title = expression('log'[10]*'(R)'),
+                                                reverse = F, label = T,
+                                                na.value = "white")) +
+  coord_sf(expand = F) +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     plot.margin = margin(0, 1, 0.2, 0.2, "cm"),
+                     axis.title = element_text(size = 15, colour = 'black'),
+                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
+                     legend.justification=c(0,0), legend.position=c(0.9,0.8),
+                     legend.background = element_blank(),
+                     legend.box.background = element_rect(colour = "black"))
+
+# ----------------------------------------------------- End of Code ---------------------------------
