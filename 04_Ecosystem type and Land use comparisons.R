@@ -329,7 +329,7 @@ ggplot(EcoDatSample, aes(x=Dmean, y=Rmean)) +
   geom_point(aes(color = Realm), size = 8) +
   xlab(NULL) + # Fractal Dimension
   ylab(NULL) + # Rugosity
-  scale_y_continuous(limits = c(-5.2,-0.5), breaks = c(-4.9,-2.85,-0.8), labels = function(i) { format(exp(i), scientific = F, digits = 3) }, expand = c(0,0)) +
+  scale_y_continuous(limits = c(-5.2,-0.5), breaks = c(-4.9,-2.85,-0.8), labels = function(i) { format(exp(i), scientific = F, digits = 1) }, expand = c(0,0)) +
   scale_x_continuous(limits = c(2.10,2.35), labels = function(x) { format(x, digits = 3) }, expand = c(0,0)) +
   scale_color_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"),
                      guide = guide_legend(title = 'Realm', 
@@ -337,7 +337,8 @@ ggplot(EcoDatSample, aes(x=Dmean, y=Rmean)) +
   theme_bw() + theme(panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),
                      axis.title = element_text(size = 15, colour = 'black'),
-                     axis.text.x = element_text(size = 30, colour = "black"), axis.text.y = element_text(size = 30, colour = "black"),
+                     axis.text.x = element_text(size = 30, colour = "black"), 
+                     axis.text.y = element_text(size = 30, colour = "black"),
                      panel.border = element_blank(),
                      legend.background = element_blank(),
                      legend.box.background = element_rect(colour = 0)) +
@@ -475,8 +476,8 @@ ggplot(EcoFD) +
 ggplot(EcoRugosity) +
   geom_ridgeline(aes(x = xx, y = Biome, height = yy, fill = Realm, colour = Realm, scale = 1)) +
   scale_x_continuous(labels = function(i) { format(exp(i), scientific = F, digits = 1) }) +
-  scale_fill_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
-  scale_color_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
+  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
   xlab(NULL) +
   ylab(NULL) +
   theme_ridges() +
@@ -492,8 +493,8 @@ ggplot(EcoRugosity) +
 ggplot(EcoFD) +
   geom_ridgeline(aes(x = xx, y = Biome, height = yy, fill = Realm, colour = Realm, scale = 0.15)) +
   scale_x_continuous(labels = function(i) { format(i, digits = 3) }) +
-  scale_fill_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
-  scale_color_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
+  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
   xlab(NULL) +
   ylab(NULL) +
   theme_ridges() +
@@ -510,8 +511,8 @@ ggplot(EcoFD) +
 ggplot(EcoRugosity) +
   geom_ridgeline(aes(x = xx, y = EcosystemType, height = yy, fill = Realm, colour = Realm, scale = 1)) +
   scale_x_continuous(labels = function(i) { format(exp(i), scientific = F, digits = 1) }) +
-  scale_fill_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
-  scale_color_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
+  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
   xlab(NULL) +
   ylab(NULL) +
   theme_ridges() +
@@ -527,8 +528,8 @@ ggplot(EcoRugosity) +
 ggplot(EcoFD) +
   geom_ridgeline(aes(x = xx, y = EcosystemType, height = yy, fill = Realm, colour = Realm, scale = 0.15)) +
   scale_x_continuous(labels = function(i) { format(i, digits = 3) }) +
-  scale_fill_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
-  scale_color_manual(values = c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF")) +
+  scale_fill_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
+  scale_color_manual(values = rev(c("#00204DFF", "#31446BFF", 'lightblue', "#5F9258FF", "#CBBA69FF", "#FFEA46FF"))) +
   xlab(NULL) +
   ylab(NULL) +
   theme_ridges() +
