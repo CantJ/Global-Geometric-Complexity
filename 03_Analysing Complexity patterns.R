@@ -310,9 +310,9 @@ if(FirstRun == TRUE){
                                    data = TmpData)
   
   # Access model fit
-  loo_compare(RH_brm_mod, RH_brm_mod2) # Non-linear is a significantly better fit
-  loo_compare(DH_brm_mod, DH_brm_mod2) # No significant difference between fits, linear will be used as it is a simpler model
-  loo_compare(DR_brm_mod, DR_brm_mod2) # No significant difference between fits, linear will be used as it is a simpler model
+  qbrms::loo_compare(RH_brm_mod, RH_brm_mod2) # Non-linear is a significantly better fit
+  qbrms::loo_compare(DH_brm_mod, DH_brm_mod2) # No significant difference between fits, linear will be used as it is a simpler model
+  qbrms::loo_compare(DR_brm_mod, DR_brm_mod2) # No significant difference between fits, linear will be used as it is a simpler model
 }
 
 # Store most appropriate model structure 

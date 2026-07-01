@@ -268,9 +268,9 @@ if(FirstRun == TRUE){
                        data = TmpData)
   
   # Access model fit
-  loo_compare(RG_brm_mod, RG_brm_mod2) 
-  loo_compare(HG_brm_mod, HG_brm_mod2) 
-  loo_compare(DG_brm_mod, DG_brm_mod2) # in all cases there is no significant difference between fits, linear will be used as it is a simpler model
+  qbrms::loo_compare(RG_brm_mod, RG_brm_mod2) 
+  qbrms::loo_compare(HG_brm_mod, HG_brm_mod2) 
+  qbrms::loo_compare(DG_brm_mod, DG_brm_mod2) # in all cases there is no significant difference between fits, linear will be used as it is a simpler model
 }
 
 # Run Bayesian models to evaluate the relationships between each complexity variable and geodiversity
@@ -343,9 +343,9 @@ if(FirstRun == TRUE){
                        data = TmpData)
   
   # Access model fit
-  loo_compare(R_mod, R_mod2) 
-  loo_compare(H_mod, H_mod2) 
-  loo_compare(D_mod, D_mod2) # in all cases there is no significant difference between fits, linear will be used as it is a simpler model
+  qbrms::loo_compare(R_mod, R_mod2) 
+  qbrms::loo_compare(H_mod, H_mod2) 
+  qbrms::loo_compare(D_mod, D_mod2) # in all cases there is no significant difference between fits, linear will be used as it is a simpler model
 }
 
 # Run Bayesian approach with resampling used to evaluate the relationships between each complexity variable and population density
