@@ -353,10 +353,10 @@ if(FirstRun == TRUE) {
   polyMod4 <- add_criterion(brm(formula = SpRich ~ poly(H, 2) * AreaKM2 + (H|Archipelago) + absLat + Isolation + HPI, 
                  data = IslandData, family = 'gaussian', iter = 2000, chains = 1, seed = 19999), 'loo')
    # Compare models
-  loo_compare(linMod1, polyMod1)
-  loo_compare(linMod2, polyMod2)
-  loo_compare(linMod3, polyMod3)
-  loo_compare(linMod4, polyMod4)
+  brms::loo_compare(linMod1, polyMod1)
+  brms::loo_compare(linMod2, polyMod2)
+  brms::loo_compare(linMod3, polyMod3)
+  brms::loo_compare(linMod4, polyMod4)
 }
 
 # baseline model
@@ -396,10 +396,10 @@ if(FirstRun == TRUE) {
                   data = IslandData, family = 'gaussian', iter = 2000, chains = 1, seed = 9999), 'loo')
   
   # Compare models
-  loo_compare(linMod1, polyMod1)
-  loo_compare(linMod2, polyMod2)
-  loo_compare(linMod3, polyMod3)
-  loo_compare(linMod4, polyMod4)
+  brms::loo_compare(linMod1, polyMod1)
+  brms::loo_compare(linMod2, polyMod2)
+  brms::loo_compare(linMod3, polyMod3)
+  brms::loo_compare(linMod4, polyMod4)
 }
 
 # baseline model
