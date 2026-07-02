@@ -372,6 +372,8 @@ SpModH <- brm(formula = SpRich ~ H * AreaKM2 + (H|Archipelago) + absLat + Isolat
 # Compare models using Bayes Factor comparison
 Sp_bfs <- bayesfactor_models(SpModD, SpModH, SpModR, denominator = SpMod, verbose = F)
 print(as.matrix(Sp_bfs), show_names = TRUE)
+# Extract baseline model R2.
+brms::bayes_R2(SpMod)
 
 #### Functional Richness
 # Determine most suitable model distribution
@@ -415,6 +417,8 @@ FModH <- brm(formula = FRich2 ~ H * AreaKM2 + (H|Archipelago) + absLat + Isolati
 # Compare models using Bayes Factor comparison
 F_bfs <- bayesfactor_models(FModD, FModH, FModR, denominator = FMod, verbose = F)
 print(as.matrix(F_bfs), show_names = TRUE)
+# Extract baseline model R2.
+brms::bayes_R2(FMod)
 
 # Extract posterior coefficients of the first polynomial slope coefficient
 # Species Richness
